@@ -18,8 +18,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     const adapter = new PrismaPg(pool);
 
     // 4. Truyền adapter vào constructor của PrismaClient gốc
-    super({ adapter });
-    // super({ adapter, log: ['query'] });
+    // super({ adapter });
+    super({ adapter, log: ['query'] });
 
     // 5. Lưu lại để dùng trong onModuleDestroy
     this.pool = pool;

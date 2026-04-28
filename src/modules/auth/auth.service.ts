@@ -207,7 +207,7 @@ export class AuthService implements OnApplicationBootstrap {
     const tokenFamily = uuidv4();
 
     const [accessToken, refreshToken] = await Promise.all([
-      this.signAccessToken(user),
+      this.signAccessToken(user, tokenFamily),
       this.signRefreshToken(user, tokenFamily),
     ]);
 
@@ -265,7 +265,7 @@ export class AuthService implements OnApplicationBootstrap {
     const authUser = this.toAuthUser(user);
 
     const [accessToken, newRefreshToken] = await Promise.all([
-      this.signAccessToken(authUser),
+      this.signAccessToken(authUser, payload.tokenFamily),
       this.signRefreshToken(authUser, payload.tokenFamily),
     ]);
 
@@ -300,13 +300,14 @@ export class AuthService implements OnApplicationBootstrap {
 
   // ─── Private Helpers ─────────────────────────────────────────────────────────
 
-  private async signAccessToken(user: AuthUser): Promise<string> {
+  private async signAccessToken(user: AuthUser, tokenFamily: string): Promise<string> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role,
+      tokenFamily,
     };
 
     return this.jwtService.signAsync(payload, {
@@ -361,6 +362,7 @@ export class AuthService implements OnApplicationBootstrap {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role as AuthUser['role'],
+      tokenFamily: '', // placeholder — được gán thực khi sign token
     };
   }
 }

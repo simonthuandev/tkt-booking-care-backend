@@ -1,24 +1,38 @@
+// http-exception.filter.ts
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
 import { Response } from 'express';
 
-// Bắt lỗi HttpException và trả về phản hồi JSON chuẩn cho client
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: HttpException, host: ArgumentsHost) {
-    const ctx = host.switchToHttp(); // Chuyển đổi context để lấy đối tượng Response
-    const response = ctx.getResponse<Response>(); // Lấy đối tượng Response từ context
-    const statusCode = exception.getStatus(); // Lấy mã trạng thái HTTP từ exception
-    const exceptionResponse: any = exception.getResponse(); // Lấy thông tin chi tiết về lỗi từ exception
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const statusCode = exception.getStatus();
+    const exceptionResponse = exception.getResponse();
 
-    // Trả về phản hồi JSON với mã lỗi và thông điệp lỗi
-    response
-      .status(statusCode)
-      .json({
-        status: 'error',
-        statusCode: statusCode,
-        message: typeof exceptionResponse.message === 'string' 
-            ? exceptionResponse.message 
-            : exceptionResponse.message[0] || 'Có lỗi xảy ra',
-      });
+    let message = 'Có lỗi xảy ra';
+
+    if (typeof exceptionResponse === 'string') {
+      // Trường hợp: throw new HttpException('message', 400)
+      message = exceptionResponse;
+    } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+      const body = exceptionResponse as Record<string, any>;
+
+      if (typeof body.message === 'string') {
+        message = body.message;
+      } else if (Array.isArray(body.message) && body.message.length > 0) {
+        // Class-validator trả về array các lỗi
+        message = body.message[0];
+      } else if (typeof body.error === 'string') {
+        // Fallback sang field error
+        message = body.error;
+      }
+    }
+
+    response.status(statusCode).json({
+      status: 'error',
+      statusCode,
+      message,
+    });
   }
 }

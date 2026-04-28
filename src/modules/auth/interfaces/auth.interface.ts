@@ -4,6 +4,7 @@ export interface JwtPayload {
   role: UserRole;
   firstName: string;
   lastName: string;
+  tokenFamily: string;
   iat?: number;
   exp?: number;
 }
@@ -31,6 +32,7 @@ export interface AuthUser {
   firstName: string;
   lastName: string;
   role: UserRole;
+  tokenFamily: string;
 }
 
 export enum UserRole {

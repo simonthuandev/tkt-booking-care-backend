@@ -24,7 +24,6 @@ import {
   COOKIE_OPTIONS,
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
-// import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
@@ -152,16 +151,12 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: AuthUser,
   ) {
-    const refreshToken = req.cookies?.[AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE];
-    if (refreshToken) {
+
+    if (user?.id && user?.tokenFamily) {
       try {
-        // decode (không verify) để lấy tokenFamily — dùng để revoke đúng session
-        const payload = this.authService.decodeToken<JwtRefreshPayload>(refreshToken);
-        if (payload?.tokenFamily && user?.id) {
-          await this.authService.logout(user.id, payload.tokenFamily);
-        }
+        await this.authService.logout(user.id, user.tokenFamily);
       } catch {
-        // Bỏ qua lỗi decode — vẫn xóa cookie bình thường
+        // Bỏ qua lỗi — vẫn xóa cookie
       }
     }
 
@@ -220,9 +215,13 @@ export class AuthController {
 
   private clearTokenCookies(res: Response): void {
     res.clearCookie(AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
-    res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
-      ...COOKIE_OPTIONS,
-      path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH // cần dùng endpoint có prefix 
-    });
+    /**
+     * nếu refresh token cookie không dùng path riêng thì clear đơn giản như này là đủ
+    */
+   res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
+  //  res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
+  //    ...COOKIE_OPTIONS,
+  //    path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH 
+  //  });
   }
 }
