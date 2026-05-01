@@ -10,6 +10,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SpecialtyModule } from './modules/specialty/specialty.module';
 import { HospitalModule } from './modules/hospital/hospital.module';
 import { DoctorModule } from './modules/doctor/doctor.module';
+import { TimeSlotModule } from './modules/timeslot/timeslot.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { DoctorModule } from './modules/doctor/doctor.module';
     SpecialtyModule,
     HospitalModule,
     DoctorModule,
+    TimeSlotModule,
   ],
 
   providers: [
