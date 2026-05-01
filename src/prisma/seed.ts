@@ -380,5 +380,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
-    await pool.end(); // ← thêm dòng này
+    await pool.end();
   });

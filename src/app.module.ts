@@ -1,10 +1,12 @@
+// Libraries
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+
+// Modules
 import { AuthModule } from './modules/auth/auth.module';
+import { SpecialtyModule } from './modules/specialty/specialty.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -29,10 +31,9 @@ import { PrismaModule } from './prisma/prisma.module';
       },
     ]),
     PrismaModule, 
-    AuthModule
+    AuthModule,
+    SpecialtyModule
   ],
-
-  controllers: [AppController],
 
   providers: [
     // Rate limiting guard toàn cục
@@ -40,7 +41,6 @@ import { PrismaModule } from './prisma/prisma.module';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    AppService
   ],
 })
 export class AppModule {}
