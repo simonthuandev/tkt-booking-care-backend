@@ -6,8 +6,9 @@ import { APP_GUARD } from '@nestjs/core';
 
 // Modules
 import { AuthModule } from './modules/auth/auth.module';
-import { SpecialtyModule } from './modules/specialty/specialty.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SpecialtyModule } from './modules/specialty/specialty.module';
+import { HospitalModule } from './modules/hospital/hospital.module';
 
 @Module({
   imports: [
@@ -32,7 +33,8 @@ import { PrismaModule } from './prisma/prisma.module';
     ]),
     PrismaModule, 
     AuthModule,
-    SpecialtyModule
+    SpecialtyModule,
+    HospitalModule,
   ],
 
   providers: [
