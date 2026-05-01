@@ -11,6 +11,7 @@ import { SpecialtyModule } from './modules/specialty/specialty.module';
 import { HospitalModule } from './modules/hospital/hospital.module';
 import { DoctorModule } from './modules/doctor/doctor.module';
 import { TimeSlotModule } from './modules/timeslot/timeslot.module';
+import { PatientProfileModule } from '@modules/patient-profile/patient-profile.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TimeSlotModule } from './modules/timeslot/timeslot.module';
     HospitalModule,
     DoctorModule,
     TimeSlotModule,
+    PatientProfileModule,
   ],
 
   providers: [
