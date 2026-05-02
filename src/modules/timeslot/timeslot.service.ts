@@ -84,10 +84,14 @@ export class TimeSlotService {
       throw new NotFoundException('Bác sĩ không tồn tại hoặc chưa được duyệt');
     }
     if (!hospital || !hospital.isActive) {
-      throw new NotFoundException('Bệnh viện không tồn tại hoặc không hoạt động');
+      throw new NotFoundException(
+        'Bệnh viện không tồn tại hoặc không hoạt động',
+      );
     }
     if (!link || !link.isActive) {
-      throw new BadRequestException('Bác sĩ này không làm việc tại bệnh viện đó');
+      throw new BadRequestException(
+        'Bác sĩ này không làm việc tại bệnh viện đó',
+      );
     }
   }
 
@@ -170,9 +174,15 @@ export class TimeSlotService {
    */
   async adminFindAll(query: AdminQueryTimeSlotsDto) {
     const {
-      doctorId, hospitalId, date,
-      fromDate, toDate, isBooked, isBlocked,
-      page, limit,
+      doctorId,
+      hospitalId,
+      date,
+      fromDate,
+      toDate,
+      isBooked,
+      isBlocked,
+      page,
+      limit,
     } = query;
     const { take, skip } = this.getPagination(page, limit);
 
@@ -253,11 +263,16 @@ export class TimeSlotService {
    */
   async generate(dto: GenerateTimeSlotsDto) {
     const {
-      doctorId, hospitalId,
-      startDate: startDateStr, endDate: endDateStr,
-      dayOfWeek, startTime, endTime,
+      doctorId,
+      hospitalId,
+      startDate: startDateStr,
+      endDate: endDateStr,
+      dayOfWeek,
+      startTime,
+      endTime,
       durationMinutes = 30,
-      breakStart, breakEnd,
+      breakStart,
+      breakEnd,
     } = dto;
 
     // ── Validate ────────────────────────────────────────────
@@ -270,14 +285,17 @@ export class TimeSlotService {
     today.setHours(0, 0, 0, 0);
 
     if (startDate < today) {
-      throw new BadRequestException('startDate không được là ngày trong quá khứ');
+      throw new BadRequestException(
+        'startDate không được là ngày trong quá khứ',
+      );
     }
     if (endDate < startDate) {
       throw new BadRequestException('endDate phải sau hoặc bằng startDate');
     }
 
     // Giới hạn 90 ngày để tránh generate quá nhiều
-    const diffDays = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+    const diffDays =
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
     if (diffDays > 90) {
       throw new BadRequestException('Khoảng thời gian tối đa là 90 ngày');
     }

@@ -5,7 +5,7 @@ export const AUTH_CONSTANTS = {
   ACCESS_TOKEN_EXPIRES_IN: '15m',
   REFRESH_TOKEN_EXPIRES_IN: '7d',
 
-  ACCESS_TOKEN_COOKIE_MAX_AGE: 15 * 60 * 1000,          // 15 minutes in ms
+  ACCESS_TOKEN_COOKIE_MAX_AGE: 15 * 60 * 1000, // 15 minutes in ms
   REFRESH_TOKEN_COOKIE_MAX_AGE: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
 
   BCRYPT_SALT_ROUNDS: 12,

@@ -153,10 +153,7 @@ export class DoctorAdminController {
    * Nếu truyền specialtyIds/hospitals → thay thế toàn bộ.
    */
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateDoctorDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateDoctorDto) {
     const data = await this.doctorService.update(id, dto);
     return {
       message: 'Cập nhật thông tin bác sĩ thành công',

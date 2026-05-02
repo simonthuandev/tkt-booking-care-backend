@@ -1,5 +1,10 @@
 // http-exception.filter.ts
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException } from '@nestjs/common';
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+} from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch(HttpException)
@@ -15,7 +20,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (typeof exceptionResponse === 'string') {
       // Trường hợp: throw new HttpException('message', 400)
       message = exceptionResponse;
-    } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+    } else if (
+      typeof exceptionResponse === 'object' &&
+      exceptionResponse !== null
+    ) {
       const body = exceptionResponse as Record<string, any>;
 
       if (typeof body.message === 'string') {

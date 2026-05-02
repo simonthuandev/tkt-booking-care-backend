@@ -46,10 +46,7 @@ export class PatientProfileController {
    * Xem chi tiết 1 hồ sơ — ownership check.
    */
   @Get(':id')
-  async findOne(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const data = await this.patientProfileService.findOne(id, user.id);
     return {
       message: 'Lấy thông tin hồ sơ bệnh nhân thành công',
@@ -97,10 +94,7 @@ export class PatientProfileController {
    * Đặt hồ sơ làm mặc định — dùng transaction, chỉ 1 profile là default.
    */
   @Patch(':id/default')
-  async setDefault(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  async setDefault(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const data = await this.patientProfileService.setDefault(id, user.id);
     return {
       message: 'Đã đặt hồ sơ mặc định thành công',
@@ -115,10 +109,7 @@ export class PatientProfileController {
    */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  async remove(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const data = await this.patientProfileService.remove(id, user.id);
     return {
       message: 'Đã xóa hồ sơ bệnh nhân thành công',

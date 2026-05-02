@@ -26,7 +26,10 @@ export class HospitalService {
       .replace(/(^-|-$)/g, '');
   }
 
-  private async assertNameUnique(name: string, excludeId?: string): Promise<void> {
+  private async assertNameUnique(
+    name: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.hospital.findUnique({
       where: { name },
       select: { id: true },
@@ -36,7 +39,10 @@ export class HospitalService {
     }
   }
 
-  private async assertSlugUnique(slug: string, excludeId?: string): Promise<void> {
+  private async assertSlugUnique(
+    slug: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.hospital.findUnique({
       where: { slug },
       select: { id: true },
@@ -100,10 +106,7 @@ export class HospitalService {
             },
           },
         },
-        orderBy: [
-          { rating: 'desc' },
-          { name: 'asc' },
-        ],
+        orderBy: [{ rating: 'desc' }, { name: 'asc' }],
         take,
         skip,
       }),
@@ -273,7 +276,7 @@ export class HospitalService {
           updatedAt: true,
           _count: {
             select: {
-              doctors: true,      // tổng bác sĩ (không lọc)
+              doctors: true, // tổng bác sĩ (không lọc)
               appointments: true, // tổng lịch hẹn
             },
           },

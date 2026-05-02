@@ -8,9 +8,9 @@ import {
 
 @Module({
   controllers: [
-    TimeSlotPublicController,  // GET /timeslots
-    TimeSlotDoctorController,  // /doctors/me/schedule, /doctors/me/timeslots
-    TimeSlotAdminController,   // /admin/timeslots CRUD + generate
+    TimeSlotPublicController, // GET /timeslots
+    TimeSlotDoctorController, // /doctors/me/schedule, /doctors/me/timeslots
+    TimeSlotAdminController, // /admin/timeslots CRUD + generate
   ],
   providers: [TimeSlotService],
   exports: [TimeSlotService], // Export để Appointment module dùng khi lock slot

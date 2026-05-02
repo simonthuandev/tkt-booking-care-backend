@@ -42,7 +42,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       const googleProfile: GoogleProfile = {
         googleId: profile.id,
-        email,                                    // đã được narrowed thành string
+        email, // đã được narrowed thành string
         firstName: profile.name?.givenName ?? '',
         lastName: profile.name?.familyName ?? '',
         avatar: profile.photos?.[0]?.value,

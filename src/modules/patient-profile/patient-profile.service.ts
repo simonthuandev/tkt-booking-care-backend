@@ -150,7 +150,11 @@ export class PatientProfileService {
    * PATCH /users/me/patient-profiles/:id
    * Cập nhật hồ sơ — có ownership check.
    */
-  async update(profileId: string, userId: string, dto: UpdatePatientProfileDto) {
+  async update(
+    profileId: string,
+    userId: string,
+    dto: UpdatePatientProfileDto,
+  ) {
     await this.assertOwnership(profileId, userId);
 
     // Không cho đổi relationship thành 'self' nếu đã có hồ sơ 'self' khác
@@ -175,11 +179,15 @@ export class PatientProfileService {
       where: { id: profileId },
       data: {
         ...(dto.fullName && { fullName: dto.fullName }),
-        ...(dto.dob !== undefined && { dob: dto.dob ? new Date(dto.dob) : null }),
+        ...(dto.dob !== undefined && {
+          dob: dto.dob ? new Date(dto.dob) : null,
+        }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
         ...(dto.phoneNumber !== undefined && { phoneNumber: dto.phoneNumber }),
         ...(dto.address !== undefined && { address: dto.address }),
-        ...(dto.relationship !== undefined && { relationship: dto.relationship }),
+        ...(dto.relationship !== undefined && {
+          relationship: dto.relationship,
+        }),
       },
     });
   }
@@ -287,7 +295,9 @@ export class PatientProfileService {
     }
 
     if (profile.userId !== userId) {
-      throw new ForbiddenException('Hồ sơ bệnh nhân không thuộc về tài khoản này');
+      throw new ForbiddenException(
+        'Hồ sơ bệnh nhân không thuộc về tài khoản này',
+      );
     }
 
     return profile;

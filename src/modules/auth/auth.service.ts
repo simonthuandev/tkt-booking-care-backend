@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { User, AuthProvider as PrismaAuthProvider, Prisma } from '@prisma/client';
+import {
+  User,
+  AuthProvider as PrismaAuthProvider,
+  Prisma,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -33,7 +37,7 @@ export class AuthService implements OnApplicationBootstrap {
     private readonly configService: ConfigService,
   ) {}
 
-    // ─── Lifecycle ───────────────────────────────────────────────────────────────
+  // ─── Lifecycle ───────────────────────────────────────────────────────────────
 
   /**
    * Dọn expired tokens mỗi lần server khởi động.
@@ -44,8 +48,8 @@ export class AuthService implements OnApplicationBootstrap {
       await this.cleanExpiredTokens();
     } catch (error) {
       this.logger.warn(
-        'Không thể dọn expired tokens lúc khởi động:', 
-        error instanceof Error ? error.message : String(error)
+        'Không thể dọn expired tokens lúc khởi động:',
+        error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -63,7 +67,10 @@ export class AuthService implements OnApplicationBootstrap {
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   getFrontendUrl(): string {
-    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3564');
+    return this.configService.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:3564',
+    );
   }
 
   // ─── Local Auth ─────────────────────────────────────────────────────────────
@@ -154,7 +161,6 @@ export class AuthService implements OnApplicationBootstrap {
 
     // Upsert theo googleId: update nếu đã có, create nếu chưa có
     try {
-
       const user = await this.prisma.user.upsert({
         where: { googleId: profile.googleId },
         update: {
@@ -175,9 +181,7 @@ export class AuthService implements OnApplicationBootstrap {
         throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
       }
       return this.toAuthUser(user);
-
-    } catch(error) {
-
+    } catch (error) {
       // Race condition: 2 request đồng thời tạo cùng 1 user → P2002
       // Xử lý bằng cách retry findUnique thay vì crash
       if (
@@ -197,7 +201,6 @@ export class AuthService implements OnApplicationBootstrap {
         return this.toAuthUser(existing);
       }
       throw error;
-
     }
   }
 
@@ -295,12 +298,15 @@ export class AuthService implements OnApplicationBootstrap {
    * (ví dụ: lấy tokenFamily lúc logout mà không cần xác thực)
    */
   decodeToken<T>(token: string): T | null {
-    return this.jwtService.decode(token) as T | null;
+    return this.jwtService.decode(token);
   }
 
   // ─── Private Helpers ─────────────────────────────────────────────────────────
 
-  private async signAccessToken(user: AuthUser, tokenFamily: string): Promise<string> {
+  private async signAccessToken(
+    user: AuthUser,
+    tokenFamily: string,
+  ): Promise<string> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -355,7 +361,9 @@ export class AuthService implements OnApplicationBootstrap {
   }
 
   // Import type trực tiếp từ @prisma/client, không phụ thuộc entity file cũ
-  private toAuthUser(user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'role'>): AuthUser {
+  private toAuthUser(
+    user: Pick<User, 'id' | 'email' | 'firstName' | 'lastName' | 'role'>,
+  ): AuthUser {
     return {
       id: user.id,
       email: user.email,

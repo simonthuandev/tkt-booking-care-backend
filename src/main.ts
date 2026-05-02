@@ -1,5 +1,9 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
@@ -23,21 +27,20 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-
   // Bật khiên bảo vệ toàn cục
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // TỰ ĐỘNG LỌC BỎ các field không được khai báo trong DTO (VD: role)
-    forbidNonWhitelisted: true, // Nếu client cố tình gửi field lạ, quăng lỗi 400 luôn
-    transform: true, // Tự động ép kiểu dữ liệu
-    transformOptions: {
-      enableImplicitConversion: true, // Cho phép tự động chuyển đổi kiểu dữ liệu (VD: "123" -> 123)
-    },
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // TỰ ĐỘNG LỌC BỎ các field không được khai báo trong DTO (VD: role)
+      forbidNonWhitelisted: true, // Nếu client cố tình gửi field lạ, quăng lỗi 400 luôn
+      transform: true, // Tự động ép kiểu dữ liệu
+      transformOptions: {
+        enableImplicitConversion: true, // Cho phép tự động chuyển đổi kiểu dữ liệu (VD: "123" -> 123)
+      },
+    }),
+  );
 
   // ─── Class Serializer (loại bỏ @Exclude fields khỏi response) ────────────
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
-  );
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Đăng ký lưới lọc bắt lỗi Prisma toàn cục
   app.useGlobalFilters(
@@ -55,8 +58,11 @@ async function bootstrap() {
   });
 
   // Áp dụng middleware logging lên toàn project cho tất cả các route
-  // app.use(new LoggerMiddleware().use); 
+  // app.use(new LoggerMiddleware().use);
 
   await app.listen(process.env.PORT ?? 8000);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});

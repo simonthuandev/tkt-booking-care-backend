@@ -32,8 +32,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
     request: RefreshTokenRequest,
     payload: JwtRefreshPayload,
   ): Promise<JwtRefreshPayload> {
-    const rawToken =
-      request?.cookies?.[AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE];
+    const rawToken = request?.cookies?.[AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE];
 
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token không tồn tại');

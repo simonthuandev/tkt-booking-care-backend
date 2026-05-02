@@ -104,7 +104,10 @@ export class DoctorService {
     return `${base}-${suffix}`;
   }
 
-  private async assertSlugUnique(slug: string, excludeId?: string): Promise<void> {
+  private async assertSlugUnique(
+    slug: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.doctor.findUnique({
       where: { slug },
       select: { id: true },
@@ -114,7 +117,10 @@ export class DoctorService {
     }
   }
 
-  private async assertEmailUnique(email: string, excludeUserId?: string): Promise<void> {
+  private async assertEmailUnique(
+    email: string,
+    excludeUserId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.user.findUnique({
       where: { email },
       select: { id: true },
@@ -134,7 +140,9 @@ export class DoctorService {
       select: { id: true },
     });
     if (found.length !== ids.length) {
-      throw new BadRequestException('Một hoặc nhiều chuyên khoa không tồn tại hoặc không active');
+      throw new BadRequestException(
+        'Một hoặc nhiều chuyên khoa không tồn tại hoặc không active',
+      );
     }
   }
 
@@ -144,7 +152,9 @@ export class DoctorService {
       select: { id: true },
     });
     if (found.length !== ids.length) {
-      throw new BadRequestException('Một hoặc nhiều bệnh viện không tồn tại hoặc không active');
+      throw new BadRequestException(
+        'Một hoặc nhiều bệnh viện không tồn tại hoặc không active',
+      );
     }
   }
 
@@ -186,7 +196,9 @@ export class DoctorService {
         hospitals: {
           some: {
             isActive: true,
-            hospital: { city: { contains: city, mode: 'insensitive' as const } },
+            hospital: {
+              city: { contains: city, mode: 'insensitive' as const },
+            },
           },
         },
       }),
@@ -299,7 +311,9 @@ export class DoctorService {
   /**
    * GET /admin/doctors?search=&specialtyId=&hospitalId=&isActive=&isVerified=&page=&limit=
    */
-  async adminFindAll(query: QueryDoctorDto & { isActive?: boolean; isVerified?: boolean }) {
+  async adminFindAll(
+    query: QueryDoctorDto & { isActive?: boolean; isVerified?: boolean },
+  ) {
     const { search, specialtyId, hospitalId, city, page, limit } = query;
     const isActive = (query as any).isActive;
     const isVerified = (query as any).isVerified;
@@ -326,7 +340,9 @@ export class DoctorService {
       ...(city && {
         hospitals: {
           some: {
-            hospital: { city: { contains: city, mode: 'insensitive' as const } },
+            hospital: {
+              city: { contains: city, mode: 'insensitive' as const },
+            },
           },
         },
       }),
@@ -404,7 +420,8 @@ export class DoctorService {
       this.validateHospitalIds(hospitalIds),
     ]);
 
-    const slug = dto.slug ?? this.generateDoctorSlug(dto.firstName, dto.lastName);
+    const slug =
+      dto.slug ?? this.generateDoctorSlug(dto.firstName, dto.lastName);
     await this.assertSlugUnique(slug);
 
     const hashedPassword = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
@@ -472,7 +489,8 @@ export class DoctorService {
    */
   async update(id: string, dto: UpdateDoctorDto) {
     const doctor = await this.findById(id);
-    const userId = (doctor as any).user?.id ?? await this.getUserIdByDoctorId(id);
+    const userId =
+      (doctor as any).user?.id ?? (await this.getUserIdByDoctorId(id));
 
     if (dto.slug) await this.assertSlugUnique(dto.slug, id);
 
@@ -485,14 +503,21 @@ export class DoctorService {
 
     await this.prisma.$transaction(async (tx) => {
       // Cập nhật User
-      if (dto.firstName || dto.lastName || dto.avatar !== undefined || dto.isUserActive !== undefined) {
+      if (
+        dto.firstName ||
+        dto.lastName ||
+        dto.avatar !== undefined ||
+        dto.isUserActive !== undefined
+      ) {
         await tx.user.update({
           where: { id: userId },
           data: {
             ...(dto.firstName && { firstName: dto.firstName }),
             ...(dto.lastName && { lastName: dto.lastName }),
             ...(dto.avatar !== undefined && { avatar: dto.avatar }),
-            ...(dto.isUserActive !== undefined && { isActive: dto.isUserActive }),
+            ...(dto.isUserActive !== undefined && {
+              isActive: dto.isUserActive,
+            }),
           },
         });
       }
@@ -504,8 +529,12 @@ export class DoctorService {
           ...(dto.slug && { slug: dto.slug }),
           ...(dto.bio !== undefined && { bio: dto.bio }),
           ...(dto.experience !== undefined && { experience: dto.experience }),
-          ...(dto.licenseNumber !== undefined && { licenseNumber: dto.licenseNumber }),
-          ...(dto.consultationFee !== undefined && { consultationFee: dto.consultationFee }),
+          ...(dto.licenseNumber !== undefined && {
+            licenseNumber: dto.licenseNumber,
+          }),
+          ...(dto.consultationFee !== undefined && {
+            consultationFee: dto.consultationFee,
+          }),
           ...(dto.isVerified !== undefined && { isVerified: dto.isVerified }),
           ...(dto.isActive !== undefined && { isActive: dto.isActive }),
         },

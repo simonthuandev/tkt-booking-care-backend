@@ -109,10 +109,7 @@ export class HospitalAdminController {
    * Cập nhật thông tin bệnh viện.
    */
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateHospitalDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateHospitalDto) {
     const data = await this.hospitalService.update(id, dto);
     return {
       message: 'Cập nhật bệnh viện thành công',

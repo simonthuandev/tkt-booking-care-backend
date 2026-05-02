@@ -12,7 +12,15 @@
  *   - 1 user thường + 1 PatientProfile
  */
 
-import { PrismaClient, UserRole, AuthProvider, HospitalType, Gender, Relationship, Prisma } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  AuthProvider,
+  HospitalType,
+  Gender,
+  Relationship,
+  Prisma,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 // const prisma = new PrismaClient();
@@ -217,7 +225,7 @@ async function main() {
       licenseNumber: 'BS-HCM-001',
       consultationFee: 350000,
       specialtyIndex: 0, // Tim mạch
-      hospitalIndex: 0,  // Chợ Rẫy
+      hospitalIndex: 0, // Chợ Rẫy
     },
     {
       email: 'bs.le.van.hung@tktbookingcare.vn',
@@ -229,7 +237,7 @@ async function main() {
       licenseNumber: 'BS-HN-002',
       consultationFee: 280000,
       specialtyIndex: 1, // Nhi khoa
-      hospitalIndex: 1,  // Vinmec
+      hospitalIndex: 1, // Vinmec
     },
     {
       email: 'bs.tran.thuy.linh@tktbookingcare.vn',
@@ -241,7 +249,7 @@ async function main() {
       licenseNumber: 'BS-HCM-003',
       consultationFee: 300000,
       specialtyIndex: 2, // Da liễu
-      hospitalIndex: 0,  // Chợ Rẫy
+      hospitalIndex: 0, // Chợ Rẫy
     },
   ];
 
@@ -320,7 +328,9 @@ async function main() {
       hospitals[d.hospitalIndex].id,
     );
 
-    console.log(`✅ Doctor: ${d.fullName} | slug: ${slug} | ${slotCount} slots`);
+    console.log(
+      `✅ Doctor: ${d.fullName} | slug: ${slug} | ${slotCount} slots`,
+    );
   }
 
   // ── 5. Regular User + PatientProfile ────────────────────────

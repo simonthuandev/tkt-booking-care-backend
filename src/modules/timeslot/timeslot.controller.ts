@@ -16,7 +16,7 @@ import {
   BlockTimeSlotDto,
   QueryTimeSlotsDto,
   AdminQueryTimeSlotsDto,
-} from "./dto/timeslot.dto";
+} from './dto/timeslot.dto';
 import { Public, Roles, CurrentUser } from '@modules/auth/decorators';
 import { UserRole, AuthUser } from '@modules/auth/interfaces/auth.interface';
 
@@ -97,7 +97,9 @@ export class TimeSlotDoctorController {
   ) {
     const data = await this.timeSlotService.doctorSetBlock(user.id, id, dto);
     return {
-      message: dto.isBlocked ? 'Đã khóa slot thành công' : 'Đã mở khóa slot thành công',
+      message: dto.isBlocked
+        ? 'Đã khóa slot thành công'
+        : 'Đã mở khóa slot thành công',
       data,
     };
   }
@@ -144,13 +146,12 @@ export class TimeSlotAdminController {
    * Admin khóa/mở khóa 1 slot cụ thể.
    */
   @Patch(':id/block')
-  async setBlock(
-    @Param('id') id: string,
-    @Body() dto: BlockTimeSlotDto,
-  ) {
+  async setBlock(@Param('id') id: string, @Body() dto: BlockTimeSlotDto) {
     const data = await this.timeSlotService.setBlock(id, dto);
     return {
-      message: dto.isBlocked ? 'Đã khóa slot thành công' : 'Đã mở khóa slot thành công',
+      message: dto.isBlocked
+        ? 'Đã khóa slot thành công'
+        : 'Đã mở khóa slot thành công',
       data,
     };
   }
@@ -178,7 +179,8 @@ export class TimeSlotAdminController {
   @Delete('bulk')
   @HttpCode(HttpStatus.OK)
   async bulkRemove(
-    @Body() dto: {
+    @Body()
+    dto: {
       doctorId: string;
       hospitalId?: string;
       fromDate: string;

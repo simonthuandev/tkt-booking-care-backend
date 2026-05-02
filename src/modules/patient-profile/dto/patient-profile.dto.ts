@@ -25,7 +25,10 @@ export class CreatePatientProfileDto {
    * Ngày sinh — ISO 8601: "1995-05-15" hoặc "1995-05-15T00:00:00.000Z"
    */
   @IsOptional()
-  @IsDateString({}, { message: 'Ngày sinh không hợp lệ. Định dạng: YYYY-MM-DD' })
+  @IsDateString(
+    {},
+    { message: 'Ngày sinh không hợp lệ. Định dạng: YYYY-MM-DD' },
+  )
   dob?: string;
 
   @IsOptional()
@@ -63,7 +66,10 @@ export class UpdatePatientProfileDto {
   fullName?: string;
 
   @IsOptional()
-  @IsDateString({}, { message: 'Ngày sinh không hợp lệ. Định dạng: YYYY-MM-DD' })
+  @IsDateString(
+    {},
+    { message: 'Ngày sinh không hợp lệ. Định dạng: YYYY-MM-DD' },
+  )
   dob?: string;
 
   @IsOptional()

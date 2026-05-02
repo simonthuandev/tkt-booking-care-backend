@@ -6,8 +6,8 @@ import {
 } from './specialty.controller';
 @Module({
   controllers: [
-    SpecialtyPublicController,  // GET /specialties, GET /specialties/:slug
-    SpecialtyAdminController,   // CRUD /admin/specialties
+    SpecialtyPublicController, // GET /specialties, GET /specialties/:slug
+    SpecialtyAdminController, // CRUD /admin/specialties
   ],
   providers: [SpecialtyService],
   exports: [SpecialtyService], // Export để Hospital/Doctor module dùng sau

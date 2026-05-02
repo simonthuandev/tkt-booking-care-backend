@@ -11,7 +11,11 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { SpecialtyService } from './specialty.service';
-import { CreateSpecialtyDto, UpdateSpecialtyDto, QuerySpecialtyDto } from "./dto/specialty.dto";
+import {
+  CreateSpecialtyDto,
+  UpdateSpecialtyDto,
+  QuerySpecialtyDto,
+} from './dto/specialty.dto';
 import { Public, Roles } from '@modules/auth/decorators';
 import { UserRole } from '@modules/auth/interfaces/auth.interface';
 
@@ -91,10 +95,7 @@ export class SpecialtyAdminController {
    * Cập nhật thông tin chuyên khoa.
    */
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateSpecialtyDto,
-  ) {
+  async update(@Param('id') id: string, @Body() dto: UpdateSpecialtyDto) {
     const data = await this.specialtyService.update(id, dto);
     return {
       message: 'Cập nhật chuyên khoa thành công',

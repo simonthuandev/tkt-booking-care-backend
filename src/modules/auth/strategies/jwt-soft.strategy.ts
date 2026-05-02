@@ -19,7 +19,7 @@ export class JwtSoftStrategy extends PassportStrategy(Strategy, 'jwt-soft') {
           request?.cookies?.[AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE] ?? null,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
-      ignoreExpiration: true,  // ✅ bỏ qua hạn token khi logout
+      ignoreExpiration: true, // ✅ bỏ qua hạn token khi logout
       secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
     });
   }

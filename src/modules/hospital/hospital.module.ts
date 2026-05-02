@@ -7,8 +7,8 @@ import {
 
 @Module({
   controllers: [
-    HospitalPublicController,  // GET /hospitals, GET /hospitals/cities, GET /hospitals/:slug
-    HospitalAdminController,   // CRUD /admin/hospitals
+    HospitalPublicController, // GET /hospitals, GET /hospitals/cities, GET /hospitals/:slug
+    HospitalAdminController, // CRUD /admin/hospitals
   ],
   providers: [HospitalService],
   exports: [HospitalService], // Export để Doctor/Appointment module dùng sau

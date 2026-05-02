@@ -8,9 +8,9 @@ import {
 
 @Module({
   controllers: [
-    DoctorSelfController,   // /doctors/me/profile — khai báo TRƯỚC public để tránh slug conflict
+    DoctorSelfController, // /doctors/me/profile — khai báo TRƯỚC public để tránh slug conflict
     DoctorPublicController, // /doctors, /doctors/:slug
-    DoctorAdminController,  // /admin/doctors CRUD
+    DoctorAdminController, // /admin/doctors CRUD
   ],
   providers: [DoctorService],
   exports: [DoctorService], // Export để Appointment/TimeSlot module dùng sau

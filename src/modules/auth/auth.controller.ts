@@ -14,9 +14,18 @@ import {
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
-import { JwtAuthGuard, JwtRefreshGuard, GoogleOAuthGuard, JwtSoftAuthGuard } from './guards/auth.guard';
+import {
+  JwtAuthGuard,
+  JwtRefreshGuard,
+  GoogleOAuthGuard,
+  JwtSoftAuthGuard,
+} from './guards/auth.guard';
 import { Public, CurrentUser, Roles } from './decorators';
-import { UserRole, AuthUser, JwtRefreshPayload } from './interfaces/auth.interface';
+import {
+  UserRole,
+  AuthUser,
+  JwtRefreshPayload,
+} from './interfaces/auth.interface';
 import {
   AUTH_CONSTANTS,
   ACCESS_COOKIE_OPTIONS,
@@ -27,9 +36,7 @@ import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   // ─── Local Auth ─────────────────────────────────────────────────────────────
 
@@ -46,11 +53,11 @@ export class AuthController {
 
     return {
       message: 'Đăng ký thành công',
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        firstName: user.firstName, 
-        lastName: user.lastName, 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role,
       },
     };
@@ -79,12 +86,12 @@ export class AuthController {
 
     return {
       message: 'Đăng nhập thành công',
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        firstName: user.firstName, 
-        lastName: user.lastName, 
-        role: user.role 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
       },
     };
   }
@@ -101,19 +108,18 @@ export class AuthController {
   @Public()
   @Get('google/callback')
   @UseGuards(GoogleOAuthGuard)
-  async googleCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
     try {
-      
       const user = req.user as AuthUser;
       const tokens = await this.authService.generateTokens(user);
       this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
-      return res.redirect(`${this.authService.getFrontendUrl()}/auth/oauth/callback`);
-
-    } catch(error) {
-      return res.redirect(`${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`);
+      return res.redirect(
+        `${this.authService.getFrontendUrl()}/auth/oauth/callback`,
+      );
+    } catch (error) {
+      return res.redirect(
+        `${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`,
+      );
     }
   }
 
@@ -151,7 +157,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: AuthUser,
   ) {
-
     if (user?.id && user?.tokenFamily) {
       try {
         await this.authService.logout(user.id, user.tokenFamily);
@@ -217,11 +222,11 @@ export class AuthController {
     res.clearCookie(AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
     /**
      * nếu refresh token cookie không dùng path riêng thì clear đơn giản như này là đủ
-    */
-   res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
-  //  res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
-  //    ...COOKIE_OPTIONS,
-  //    path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH 
-  //  });
+     */
+    res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
+    //  res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
+    //    ...COOKIE_OPTIONS,
+    //    path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH
+    //  });
   }
 }

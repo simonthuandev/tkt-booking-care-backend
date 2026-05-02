@@ -4,7 +4,11 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CreateSpecialtyDto, UpdateSpecialtyDto, QuerySpecialtyDto } from "./dto/specialty.dto";
+import {
+  CreateSpecialtyDto,
+  UpdateSpecialtyDto,
+  QuerySpecialtyDto,
+} from './dto/specialty.dto';
 
 @Injectable()
 export class SpecialtyService {
@@ -29,7 +33,10 @@ export class SpecialtyService {
   /**
    * Kiểm tra slug đã tồn tại chưa, bỏ qua record có excludeId (dùng khi update).
    */
-  private async assertSlugUnique(slug: string, excludeId?: string): Promise<void> {
+  private async assertSlugUnique(
+    slug: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.specialty.findUnique({
       where: { slug },
       select: { id: true },
@@ -42,7 +49,10 @@ export class SpecialtyService {
   /**
    * Kiểm tra tên đã tồn tại chưa, bỏ qua record có excludeId (dùng khi update).
    */
-  private async assertNameUnique(name: string, excludeId?: string): Promise<void> {
+  private async assertNameUnique(
+    name: string,
+    excludeId?: string,
+  ): Promise<void> {
     const existing = await this.prisma.specialty.findUnique({
       where: { name },
       select: { id: true },
@@ -157,9 +167,7 @@ export class SpecialtyService {
               },
             },
           },
-          orderBy: [
-            { isPrimary: 'desc' },
-          ],
+          orderBy: [{ isPrimary: 'desc' }],
         },
       },
     });
