@@ -16,6 +16,8 @@ import { AppointmentModule } from '@modules/appointment/appointment.module';
 import { MedicalRecordModule } from '@modules/medical-record/medical-record.module';
 import { ReviewModule } from '@modules/review/review.module';
 import { NewsModule } from '@modules/news/news.module';
+import { AdminModule } from '@modules/admin/admin.module';
+import { SearchModule } from '@modules/search/search.module';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { NewsModule } from '@modules/news/news.module';
     MedicalRecordModule,
     ReviewModule,
     NewsModule,
+    AdminModule,
+    SearchModule,
   ],
 
   providers: [
