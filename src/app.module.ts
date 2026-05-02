@@ -15,6 +15,7 @@ import { PatientProfileModule } from '@modules/patient-profile/patient-profile.m
 import { AppointmentModule } from '@modules/appointment/appointment.module';
 import { MedicalRecordModule } from '@modules/medical-record/medical-record.module';
 import { ReviewModule } from '@modules/review/review.module';
+import { NewsModule } from '@modules/news/news.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { ReviewModule } from '@modules/review/review.module';
     AppointmentModule,
     MedicalRecordModule,
     ReviewModule,
+    NewsModule,
   ],
 
   providers: [
