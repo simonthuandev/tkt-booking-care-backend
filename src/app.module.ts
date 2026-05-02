@@ -13,6 +13,7 @@ import { DoctorModule } from '@modules/doctor/doctor.module';
 import { TimeSlotModule } from '@modules/timeslot/timeslot.module';
 import { PatientProfileModule } from '@modules/patient-profile/patient-profile.module';
 import { AppointmentModule } from '@modules/appointment/appointment.module';
+import { MedicalRecordModule } from '@modules/medical-record/medical-record.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { AppointmentModule } from '@modules/appointment/appointment.module';
     TimeSlotModule,
     PatientProfileModule,
     AppointmentModule,
+    MedicalRecordModule,
   ],
 
   providers: [
