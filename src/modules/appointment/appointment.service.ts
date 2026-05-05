@@ -235,13 +235,21 @@ export class AppointmentService {
       }
 
       // Kiểm tra slot không phải trong quá khứ
-      const slotDate = new Date(slot.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (slotDate < today) {
-        throw new BadRequestException(
-          'Không thể đặt lịch cho ngày đã qua',
-        );
+      // const slotDate = new Date(slot.date);
+      // const today = new Date();
+      // today.setHours(0, 0, 0, 0);
+      // if (slotDate < today) {
+      //   throw new BadRequestException(
+      //     'Không thể đặt lịch cho ngày đã qua',
+      //   );
+      // }
+
+      const slotDateTime = new Date(slot.date);
+      const [slotHour, slotMin] = slot.startTime.split(':').map(Number);
+      slotDateTime.setHours(slotHour, slotMin, 0, 0);
+
+      if (slotDateTime <= new Date()) {
+        throw new BadRequestException('Không thể đặt lịch cho khung giờ đã qua');
       }
 
       // Kiểm tra user không có lịch hẹn ACTIVE khác với cùng bác sĩ trong cùng ngày
