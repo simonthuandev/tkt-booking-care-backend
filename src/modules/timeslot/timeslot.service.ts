@@ -374,10 +374,10 @@ export class TimeSlotService {
       );
     }
 
-    // Giới hạn tối đa 500 slots / 1 lần generate để tránh timeout
-    if (slotsToCreate.length > 500) {
+    // Giới hạn tối đa 1000 slots / 1 lần generate để tránh timeout
+    if (slotsToCreate.length > 1000) {
       throw new BadRequestException(
-        `Số lượng slot sinh ra (${slotsToCreate.length}) vượt quá giới hạn 500/lần. Hãy rút ngắn khoảng thời gian hoặc tăng durationMinutes.`,
+        `Số lượng slot sinh ra (${slotsToCreate.length}) vượt quá giới hạn 1000/lần. Hãy rút ngắn khoảng thời gian hoặc tăng durationMinutes.`,
       );
     }
 

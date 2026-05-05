@@ -33,17 +33,17 @@ import {
   COOKIE_OPTIONS,
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 
-@Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // ─── Local Auth ─────────────────────────────────────────────────────────────
+// ─── Local Auth ─────────────────────────────────────────────────────────────
 
   @Public()
   @Post('register')
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -68,6 +68,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -103,6 +104,7 @@ export class AuthController {
   @Public()
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
+  @SkipThrottle()
   googleLogin() {
     // Passport tự redirect sang Google — không cần body
   }
@@ -131,6 +133,7 @@ export class AuthController {
   @Post('refresh')
   @UseGuards(JwtRefreshGuard)
   @HttpCode(HttpStatus.OK)
+  @Throttle({ short: { ttl: 1000, limit: 5 }, medium: { ttl: 60000, limit: 30 } })
   async refresh(
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) res: Response,
@@ -188,6 +191,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @SkipThrottle()
   getMe(@CurrentUser() user: AuthUser) {
     return { user };
   }

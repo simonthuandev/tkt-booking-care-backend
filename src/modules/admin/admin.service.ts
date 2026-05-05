@@ -358,7 +358,7 @@ export class AdminService {
       }),
       this.prisma.hospital.findMany({
         where: { id: { in: topHospitalsRaw.map((h) => h.hospitalId) } },
-        select: {
+        select: { 
           id: true,
           name: true,
           slug: true,
