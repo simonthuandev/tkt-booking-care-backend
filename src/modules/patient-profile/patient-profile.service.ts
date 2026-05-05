@@ -260,18 +260,19 @@ export class PatientProfileService {
   async setDefault(profileId: string, userId: string) {
     await this.assertOwnership(profileId, userId);
 
-    await this.prisma.$transaction([
+    await this.prisma.$transaction(async (tx) => {
       // Bước 1: Unset tất cả default của user này
-      this.prisma.patientProfile.updateMany({
+      await tx.patientProfile.updateMany({
         where: { userId, isDefault: true },
         data: { isDefault: false },
-      }),
+      });
+      
       // Bước 2: Set profile được chọn thành default
-      this.prisma.patientProfile.update({
+      await tx.patientProfile.update({
         where: { id: profileId },
         data: { isDefault: true },
-      }),
-    ]);
+      });
+    });
 
     return this.prisma.patientProfile.findUnique({
       where: { id: profileId },
