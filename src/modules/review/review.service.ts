@@ -166,15 +166,45 @@ export class ReviewService {
         },
         select: REVIEW_SELECT,
       });
+      
+      // Recalc Doctor Rating inline
+      const doctorAgg = await tx.review.aggregate({
+        where: { doctorId: appointment.doctorId, isVisible: true },
+        _avg: { rating: true },
+        _count: { id: true },
+      });
+
+      await tx.doctor.update({
+        where: { id: appointment.doctorId },
+        data: {
+          rating: Math.round((doctorAgg._avg.rating ?? 0) * 10) / 10, // 1 chữ số thập phân
+          totalReviews: doctorAgg._count.id,
+        },
+      });
+
+      // Recalc Hospital Rating inline
+      const hospitalAgg = await tx.review.aggregate({
+        where: { hospitalId: appointment.hospitalId, isVisible: true },
+        _avg: { rating: true },
+        _count: { id: true },
+      });
+
+      await tx.hospital.update({
+        where: { id: appointment.hospitalId },
+        data: {
+          rating: Math.round((hospitalAgg._avg.rating ?? 0) * 10) / 10,
+          totalReviews: hospitalAgg._count.id,
+        },
+      });
 
       return created;
     });
 
     // Cập nhật cached rating sau transaction (nếu fail thì chỉ cache sai, không rollback review)
-    await Promise.all([
-      this.recalcDoctorRating(appointment.doctorId),
-      this.recalcHospitalRating(appointment.hospitalId),
-    ]);
+    // await Promise.all([
+    //   this.recalcDoctorRating(appointment.doctorId),
+    //   this.recalcHospitalRating(appointment.hospitalId),
+    // ]);
 
     return review;
   }
