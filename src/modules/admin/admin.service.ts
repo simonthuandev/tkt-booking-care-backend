@@ -243,47 +243,56 @@ export class AdminService {
       newHospitals,
       newReviews,
       publishedNews,
-      completedForRevenue,
       topDoctorsRaw,
       topHospitalsRaw,
       reportAppointments,
     ] = await Promise.all([
+      // totalAppointments = tổng số appointment tạo mới trong khoảng thời gian
       this.prisma.appointment.count({ where: appointmentWhere }),
+
+      // completedAppointments = tổng số appointment có status = completed trong khoảng thời gian
       this.prisma.appointment.count({
         where: { ...appointmentWhere, status: AppointmentStatus.completed },
       }),
+
+      // cancelledAppointments = tổng số appointment có status = cancelled trong khoảng thời gian
       this.prisma.appointment.count({
         where: { ...appointmentWhere, status: AppointmentStatus.cancelled },
       }),
+
+      // noShowAppointments = tổng số appointment có status = no_show trong khoảng thời gian
       this.prisma.appointment.count({
         where: { ...appointmentWhere, status: AppointmentStatus.no_show },
       }),
+
+      // appointmentsByStatus = số lượng appointment theo từng status trong khoảng thời gian
       this.prisma.appointment.groupBy({
         by: ['status'],
         where: appointmentWhere,
         _count: { _all: true },
       }),
+
+      // newUsers = số lượng user mới tạo trong khoảng thời gian
       this.prisma.user.count({ where: { createdAt: dateWhere } }),
+
+      // newDoctors = số lượng doctor mới tạo trong khoảng thời gian
       this.prisma.doctor.count({ where: { createdAt: dateWhere } }),
+
+      // newHospitals = số lượng hospital mới tạo trong khoảng thời gian
       this.prisma.hospital.count({ where: { createdAt: dateWhere } }),
+
+      // newReviews = số lượng review mới tạo trong khoảng thời gian
       this.prisma.review.count({ where: { createdAt: dateWhere } }),
+
+      // publishedNews = số lượng news mới được publish trong khoảng thời gian
       this.prisma.news.count({
         where: {
           isPublished: true,
           publishedAt: dateWhere,
         },
       }),
-      this.prisma.appointment.findMany({
-        where: {
-          ...appointmentWhere,
-          status: AppointmentStatus.completed,
-        },
-        select: {
-          doctor: {
-            select: { consultationFee: true },
-          },
-        },
-      }),
+
+      // topDoctorsRaw = top 5 doctor có nhiều appointment nhất trong khoảng thời gian, dùng để lấy profile sau đó map ra kết quả trả về
       this.prisma.appointment.groupBy({
         by: ['doctorId'],
         where: appointmentWhere,
@@ -293,6 +302,8 @@ export class AdminService {
         },
         take: 5,
       }),
+
+      // topHospitalsRaw = top 5 hospital có nhiều appointment nhất trong khoảng thời gian, dùng để lấy profile sau đó map ra kết quả trả về
       this.prisma.appointment.groupBy({
         by: ['hospitalId'],
         where: appointmentWhere,
@@ -302,6 +313,8 @@ export class AdminService {
         },
         take: 5,
       }),
+
+      // reportAppointments = danh sách appointment tạo trong khoảng thời gian, dùng để vẽ biểu đồ timeline
       this.prisma.appointment.findMany({
         where: appointmentWhere,
         select: { createdAt: true, status: true },
@@ -317,10 +330,16 @@ export class AdminService {
       {} as Record<AppointmentStatus, number>,
     );
 
-    const estimatedRevenue = completedForRevenue.reduce(
-      (sum, item) => sum + item.doctor.consultationFee,
-      0,
-    );
+    // Dùng raw query để tối ưu hiệu suất
+    const revenueResult = await this.prisma.$queryRaw<[{ total: number }]>`
+      SELECT COALESCE(SUM(d."consultationFee"), 0) as total
+      FROM "Appointment" a
+      JOIN "Doctor" d ON a."doctorId" = d.id
+      WHERE a."createdAt" >= ${fromDate} 
+        AND a."createdAt" <= ${toDate}
+        AND a."status" = 'completed'
+    `;
+    const estimatedRevenue = Number(revenueResult[0]?.total ?? 0);
 
     const [topDoctorProfiles, topHospitalProfiles] = await Promise.all([
       this.prisma.doctor.findMany({

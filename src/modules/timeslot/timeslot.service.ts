@@ -354,7 +354,7 @@ export class TimeSlotService {
             slotsToCreate.push({
               doctorId,
               hospitalId,
-              date: new Date(current), // clone để tránh mutate
+              date: new Date(current.getTime()), // clone để tránh mutate
               startTime: this.minutesToTime(slotStart),
               endTime: this.minutesToTime(slotEnd),
             });

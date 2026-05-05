@@ -185,7 +185,7 @@ export class MedicalRecordService {
 
     const record = await this.findRecordOrThrow(recordId);
 
-    if (record.doctor.userId !== userId) {
+    if (record.doctor.userId !== userId) { // Vì MedicalRecord k có quan hệ với User, nên userId phải lấy qua Doctor
       throw new ForbiddenException(
         'Bạn không có quyền chỉnh sửa hồ sơ bệnh án này',
       );

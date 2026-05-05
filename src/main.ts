@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { PrismaClientExceptionFilter } from '@common/filters/prisma-client-exception.filter';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
+import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,8 +45,9 @@ async function bootstrap() {
 
   // Đăng ký lưới lọc bắt lỗi Prisma toàn cục
   app.useGlobalFilters(
-    new PrismaClientExceptionFilter(),
-    new HttpExceptionFilter(), // Bắt lỗi HTTP chung từ NestJS và Class Validator
+    new AllExceptionsFilter(), // Bắt tất cả lỗi còn sót lại
+    new PrismaClientExceptionFilter(), // Bắt lỗi từ Prisma Client
+    new HttpExceptionFilter(), // Bắt lỗi HTTP (vd: throw new BadRequestException())
   );
 
   // Tạo prefix chung (Ví dụ: 'api')

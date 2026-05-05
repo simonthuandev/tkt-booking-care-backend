@@ -33,7 +33,9 @@ import {
   COOKIE_OPTIONS,
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
+import { Throttle } from '@nestjs/throttler';
 
+@Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

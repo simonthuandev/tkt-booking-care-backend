@@ -28,18 +28,18 @@ import { SearchModule } from '@modules/search/search.module';
     }),
 
     // ─── Rate Limiting (chống brute-force) ───────────────────────────────────
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000, // 1 giây
-        limit: 5, // tối đa 5 request
-      },
-      {
-        name: 'medium',
-        ttl: 60000, // 1 phút
-        limit: 50,
-      },
-    ]),
+    // ThrottlerModule.forRoot([
+    //   {
+    //     name: 'short',
+    //     ttl: 1000, // 1 giây
+    //     limit: 5, // tối đa 5 request
+    //   },
+    //   {
+    //     name: 'medium',
+    //     ttl: 60000, // 1 phút
+    //     limit: 50,
+    //   },
+    // ]),
     PrismaModule,
     AuthModule,
     SpecialtyModule,

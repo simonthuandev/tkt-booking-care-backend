@@ -335,6 +335,9 @@ export class AppointmentService {
       this.prisma.appointment.count({ where }),
     ]);
 
+    const STATUS_PRIORITY = { pending: 0, confirmed: 1, processing: 2, completed: 3, cancelled: 4, no_show: 5 };
+    data.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status])
+
     return {
       data,
       meta: {
