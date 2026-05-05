@@ -273,6 +273,7 @@ model TimeSlot {
   @@index([doctorId, date])
   @@index([hospitalId, date])
   @@index([isBooked, isBlocked])
+  @@index([doctorId, isBooked, isBlocked]) // query slot available
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -306,6 +307,7 @@ model Appointment {
   @@index([hospitalId])
   @@index([status])
   @@index([createdAt])
+  @@index([doctorId, createdAt])  // bác sĩ xem lịch theo ngày
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -386,4 +388,5 @@ model News {
   @@index([isPublished, publishedAt])
   @@index([category])
   @@index([authorId])
+  @@index([isPublished, category]) // filter kép hay dùng
 }
