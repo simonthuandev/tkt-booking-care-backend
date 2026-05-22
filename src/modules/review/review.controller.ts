@@ -18,7 +18,6 @@ import {
 } from './dto/review.dto';
 import { Public, Roles, CurrentUser } from '@modules/auth/decorators';
 import { UserRole, AuthUser } from '@modules/auth/interfaces';
-import { QueryMyMedicalRecordsDto } from '@modules/medical-record/dto/medical-record.dto';
 
 // ─────────────────────────────────────────────────────────────
 //  PUBLIC Controller  →  GET /api/v1/reviews
@@ -90,7 +89,7 @@ export class ReviewUserMeController {
   @Get()
   async findMyReviews(
     @CurrentUser() user: AuthUser,
-    @Query() query: QueryMyMedicalRecordsDto,
+    @Query() query: QueryReviewDto,
   ) {
     const result = await this.reviewService.findByUser(user.id, query);
     return {

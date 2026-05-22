@@ -13,11 +13,10 @@ import { DoctorModule } from '@modules/doctor/doctor.module';
 import { TimeSlotModule } from '@modules/timeslot/timeslot.module';
 import { PatientProfileModule } from '@modules/patient-profile/patient-profile.module';
 import { AppointmentModule } from '@modules/appointment/appointment.module';
-import { MedicalRecordModule } from '@modules/medical-record/medical-record.module';
 import { ReviewModule } from '@modules/review/review.module';
-import { NewsModule } from '@modules/news/news.module';
 import { AdminModule } from '@modules/admin/admin.module';
 import { SearchModule } from '@modules/search/search.module';
+import { PaymentModule } from '@modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -48,11 +47,10 @@ import { SearchModule } from '@modules/search/search.module';
     TimeSlotModule,
     PatientProfileModule,
     AppointmentModule,
-    MedicalRecordModule,
     ReviewModule,
-    NewsModule,
     AdminModule,
     SearchModule,
+    PaymentModule,
   ],
 
   providers: [

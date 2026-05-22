@@ -123,8 +123,6 @@ export class AdminService {
       todayAppointments,
       appointmentsByStatus,
       totalReviews,
-      totalNews,
-      publishedNews,
     ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.user.count({ where: { isActive: true } }),
@@ -148,8 +146,6 @@ export class AdminService {
         _count: { _all: true },
       }),
       this.prisma.review.count(),
-      this.prisma.news.count(),
-      this.prisma.news.count({ where: { isPublished: true } }),
     ]);
 
     const roleMap = usersByRole.reduce(
@@ -206,11 +202,6 @@ export class AdminService {
       },
       content: {
         reviews: totalReviews,
-        news: {
-          total: totalNews,
-          published: publishedNews,
-          draft: totalNews - publishedNews,
-        },
       },
     };
   }
@@ -242,7 +233,6 @@ export class AdminService {
       newDoctors,
       newHospitals,
       newReviews,
-      publishedNews,
       topDoctorsRaw,
       topHospitalsRaw,
       reportAppointments,
@@ -283,14 +273,6 @@ export class AdminService {
 
       // newReviews = số lượng review mới tạo trong khoảng thời gian
       this.prisma.review.count({ where: { createdAt: dateWhere } }),
-
-      // publishedNews = số lượng news mới được publish trong khoảng thời gian
-      this.prisma.news.count({
-        where: {
-          isPublished: true,
-          publishedAt: dateWhere,
-        },
-      }),
 
       // topDoctorsRaw = top 5 doctor có nhiều appointment nhất trong khoảng thời gian, dùng để lấy profile sau đó map ra kết quả trả về
       this.prisma.appointment.groupBy({
@@ -434,7 +416,6 @@ export class AdminService {
         newDoctors,
         newHospitals,
         newReviews,
-        publishedNews,
       },
       appointmentsByStatus: {
         pending: appointmentStatusMap.pending ?? 0,
@@ -502,7 +483,6 @@ export class AdminService {
           _count: {
             select: {
               patientProfiles: true,
-              newsArticles: true,
             },
           },
         },

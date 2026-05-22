@@ -42,12 +42,12 @@ enum HospitalType {
 }
 
 enum AppointmentStatus {
-  pending     // Vừa đặt, chờ xác nhận
-  confirmed   // Bác sĩ / admin đã xác nhận
-  processing  // Bệnh nhân đang trong phòng khám
-  completed   // Khám xong — có thể viết review
-  cancelled   // Đã hủy
-  no_show     // Bệnh nhân không đến
+  pending // Vừa đặt, chờ xác nhận
+  confirmed // Bác sĩ / admin đã xác nhận
+  processing // Bệnh nhân đang trong phòng khám
+  completed // Khám xong — có thể viết review
+  cancelled // Đã hủy
+  no_show // Bệnh nhân không đến
 }
 
 enum CancelledBy {
@@ -56,30 +56,42 @@ enum CancelledBy {
   admin
 }
 
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PaymentProvider {
+  vn_pay
+  momo
+  stripe
+}
+
 // ─────────────────────────────────────────────────────────────
 //  USER & AUTH
 // ─────────────────────────────────────────────────────────────
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
+  id              String       @id @default(uuid())
+  email           String       @unique
   password        String?
   firstName       String
   lastName        String
   avatar          String?
-  role            UserRole      @default(user)
-  provider        AuthProvider  @default(local)
-  googleId        String?       @unique
-  isActive        Boolean       @default(true)
-  isEmailVerified Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  role            UserRole     @default(user)
+  provider        AuthProvider @default(local)
+  googleId        String?      @unique
+  isActive        Boolean      @default(true)
+  isEmailVerified Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   // Relations
   refreshTokens   RefreshToken[]
   patientProfiles PatientProfile[]
   doctorProfile   Doctor?
-  newsArticles    News[]
 
   @@index([role])
 }
@@ -94,7 +106,7 @@ model RefreshToken {
   revokedAt   DateTime?
   createdAt   DateTime  @default(now())
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, tokenFamily])
   @@index([userId, isRevoked])
@@ -122,7 +134,6 @@ model PatientProfile {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   appointments Appointment[]
   reviews      Review[]
-  medicalRecords MedicalRecord[]
 
   @@index([userId])
   @@index([userId, isDefault])
@@ -137,13 +148,13 @@ model Specialty {
   name        String   @unique
   slug        String   @unique
   description String?
-  icon        String?  // tên icon hoặc URL
+  icon        String? // tên icon hoặc URL
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  doctors     DoctorSpecialty[]
+  doctors DoctorSpecialty[]
 
   @@index([slug])
   @@index([isActive])
@@ -199,13 +210,12 @@ model Doctor {
   updatedAt       DateTime @updatedAt
 
   // Relations
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialties     DoctorSpecialty[]
-  hospitals       DoctorHospital[]
-  timeSlots       TimeSlot[]
-  appointments    Appointment[]
-  medicalRecords  MedicalRecord[]
-  reviews         Review[]
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialties  DoctorSpecialty[]
+  hospitals    DoctorHospital[]
+  timeSlots    TimeSlot[]
+  appointments Appointment[]
+  reviews      Review[]
 
   @@index([slug])
   @@index([isVerified, isActive])
@@ -219,10 +229,10 @@ model Doctor {
 model DoctorSpecialty {
   doctorId    String
   specialtyId String
-  isPrimary   Boolean  @default(false) // chuyên khoa chính
+  isPrimary   Boolean @default(false) // chuyên khoa chính
 
-  doctor      Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
   @@id([doctorId, specialtyId])
   @@index([specialtyId])
@@ -233,17 +243,17 @@ model DoctorSpecialty {
 // ─────────────────────────────────────────────────────────────
 
 model DoctorHospital {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   doctorId    String
   hospitalId  String
   // VD: "MON,WED,FRI" — lưu dạng string để flexible
   workingDays String?
-  startTime   String?  // "08:00"
-  endTime     String?  // "17:00"
-  isActive    Boolean  @default(true)
+  startTime   String? // "08:00"
+  endTime     String? // "17:00"
+  isActive    Boolean @default(true)
 
-  doctor      Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@unique([doctorId, hospitalId])
   @@index([hospitalId])
@@ -258,14 +268,14 @@ model TimeSlot {
   id         String   @id @default(uuid())
   doctorId   String
   hospitalId String
-  date       DateTime @db.Date       // chỉ lưu ngày, không giờ
-  startTime  String                  // "08:00"
-  endTime    String                  // "08:30"
+  date       DateTime @db.Date // chỉ lưu ngày, không giờ
+  startTime  String // "08:00"
+  endTime    String // "08:30"
   isBooked   Boolean  @default(false)
   isBlocked  Boolean  @default(false) // admin/bác sĩ chủ động khóa
 
-  doctor     Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   appointment Appointment?
 
@@ -287,52 +297,29 @@ model Appointment {
   hospitalId       String
   timeSlotId       String            @unique // 1 slot chỉ có 1 appointment
   status           AppointmentStatus @default(pending)
-  reason           String?           // lý do khám
+  paymentStatus    PaymentStatus     @default(pending)
+  totalAmount      Float             @default(0)
+  reason           String? // lý do khám
   cancelReason     String?
   cancelledBy      CancelledBy?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
   // Relations
-  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
-  doctor           Doctor         @relation(fields: [doctorId], references: [id])
-  hospital         Hospital       @relation(fields: [hospitalId], references: [id])
-  timeSlot         TimeSlot       @relation(fields: [timeSlotId], references: [id])
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id])
+  doctor         Doctor         @relation(fields: [doctorId], references: [id])
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id])
+  timeSlot       TimeSlot       @relation(fields: [timeSlotId], references: [id])
 
-  medicalRecord    MedicalRecord?
-  review           Review?
+  review   Review?
+  payments Payment[]
 
   @@index([patientProfileId, status])
   @@index([doctorId, status])
   @@index([hospitalId])
   @@index([status])
   @@index([createdAt])
-  @@index([doctorId, createdAt])  // bác sĩ xem lịch theo ngày
-}
-
-// ─────────────────────────────────────────────────────────────
-//  MEDICAL RECORD
-//  Bác sĩ điền sau khi appointment = completed
-// ─────────────────────────────────────────────────────────────
-
-model MedicalRecord {
-  id               String   @id @default(uuid())
-  appointmentId    String   @unique // 1 appointment → 1 record
-  patientProfileId String
-  doctorId         String
-  diagnosis        String?
-  prescription     String?
-  notes            String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Relations
-  appointment      Appointment    @relation(fields: [appointmentId], references: [id])
-  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
-  doctor           Doctor         @relation(fields: [doctorId], references: [id])
-
-  @@index([patientProfileId])
-  @@index([doctorId])
+  @@index([doctorId, createdAt]) // bác sĩ xem lịch theo ngày
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -347,16 +334,16 @@ model Review {
   patientProfileId String
   doctorId         String
   hospitalId       String
-  rating           Int      // 1-5
+  rating           Int // 1-5
   comment          String?
   isVisible        Boolean  @default(true) // admin có thể ẩn
   createdAt        DateTime @default(now())
 
   // Relations
-  appointment      Appointment    @relation(fields: [appointmentId], references: [id])
-  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
-  doctor           Doctor         @relation(fields: [doctorId], references: [id])
-  hospital         Hospital       @relation(fields: [hospitalId], references: [id])
+  appointment    Appointment    @relation(fields: [appointmentId], references: [id])
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id])
+  doctor         Doctor         @relation(fields: [doctorId], references: [id])
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id])
 
   @@index([doctorId, isVisible])
   @@index([hospitalId, isVisible])
@@ -364,29 +351,22 @@ model Review {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  NEWS
+//  PAYMENT
 // ─────────────────────────────────────────────────────────────
 
-model News {
-  id          String    @id @default(uuid())
-  title       String
-  slug        String    @unique
-  content     String    // full HTML hoặc markdown
-  excerpt     String?   // tóm tắt ngắn
-  thumbnail   String?
-  category    String?
-  authorId    String
-  isPublished Boolean   @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model Payment {
+  id            String          @id @default(uuid())
+  appointmentId String
+  amount        Float           @default(0)
+  provider      PaymentProvider
+  transactionId String? // Mã tham chiếu từ VNPAY / MoMo
+  status        PaymentStatus   @default(pending)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
   // Relations
-  author      User      @relation(fields: [authorId], references: [id])
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
 
-  @@index([slug])
-  @@index([isPublished, publishedAt])
-  @@index([category])
-  @@index([authorId])
-  @@index([isPublished, category]) // filter kép hay dùng
+  @@index([appointmentId])
+  @@index([transactionId])
 }

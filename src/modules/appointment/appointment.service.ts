@@ -59,6 +59,8 @@ const ADMIN_CANCELLABLE_STATUSES: AppointmentStatus[] = [
 const APPOINTMENT_LIST_SELECT = {
   id: true,
   status: true,
+  paymentStatus: true,
+  totalAmount: true,
   reason: true,
   cancelReason: true,
   cancelledBy: true,
@@ -102,16 +104,6 @@ const APPOINTMENT_LIST_SELECT = {
  */
 const APPOINTMENT_DETAIL_SELECT = {
   ...APPOINTMENT_LIST_SELECT,
-  medicalRecord: {
-    select: {
-      id: true,
-      diagnosis: true,
-      prescription: true,
-      notes: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  },
   review: {
     select: {
       id: true,
@@ -215,6 +207,9 @@ export class AppointmentService {
           endTime: true,
           isBooked: true,
           isBlocked: true,
+          doctor: {
+            select: { consultationFee: true }
+          }
         },
       });
 
@@ -288,6 +283,8 @@ export class AppointmentService {
             timeSlotId: dto.timeSlotId,
             reason: dto.reason,
             status: AppointmentStatus.pending,
+            paymentStatus: 'pending',
+            totalAmount: slot.doctor.consultationFee,
           },
           select: APPOINTMENT_DETAIL_SELECT,
         }),
