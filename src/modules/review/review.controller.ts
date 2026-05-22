@@ -17,7 +17,7 @@ import {
   QueryAdminReviewDto,
 } from './dto/review.dto';
 import { Public, Roles, CurrentUser } from '@modules/auth/decorators';
-import { UserRole, AuthUser } from '@modules/auth/interfaces/auth.interface';
+import { UserRole, AuthUser } from '@modules/auth/interfaces';
 import { QueryMyMedicalRecordsDto } from '@modules/medical-record/dto/medical-record.dto';
 
 // ─────────────────────────────────────────────────────────────

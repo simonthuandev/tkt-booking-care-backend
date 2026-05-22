@@ -16,20 +16,34 @@ import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
-    PassportModule.register({ session: false }),
+    /** 
+     * server khong luu session, chỉ dua vao token gui tu client
+    */
+    PassportModule.register({ session: false }), 
+    /**
+     * khong can secret va options vi moi strategy tu config rieng
+     * nhung van can JwtModule empty o day de co the inject JwtService vao AuthService
+     */
     JwtModule.register({}),
-    // JwtModule không cần secret ở đây vì mỗi strategy tự config
-    // nhưng vẫn cần register để inject JwtService vào AuthService
-    // ScheduleModule.forRoot(),  // cần cho @Cron
   ],
   providers: [
+    /**
+     * Xu ly logic auth chinh (dang ky, dang nhap, tao token, xac thuc token, luu token, thu hoi token...)
+     */
     AuthService,
+
+    /**
+     * Dinh nghia cac chien luoc xac thuc (lay token tu header, giai ma token, kiem tra token...)
+     */
     JwtStrategy,
     JwtRefreshStrategy,
     JwtSoftStrategy,
     GoogleStrategy,
 
-    // Áp dụng JwtAuthGuard toàn cục — routes cần public thì thêm @Public()
+    /**
+     * Ap dung JwtAuthGuard va RolesGuard cho toan bo app (global guard)
+     * Moi request deu phai qua 2 guard nay
+     */
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

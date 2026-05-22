@@ -3,7 +3,7 @@ import {
   createParamDecorator,
   ExecutionContext,
 } from '@nestjs/common';
-import { UserRole, AuthUser } from '../interfaces/auth.interface';
+import { UserRole, AuthUser } from '../interfaces';
 
 // ─── @Public() ───────────────────────────────────────────────────────────────
 export const IS_PUBLIC_KEY = 'isPublic';

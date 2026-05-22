@@ -3,13 +3,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { JwtPayload, AuthUser } from '../interfaces/auth.interface';
+import { JwtPayload, AuthUser } from '../interfaces';
 import { AUTH_CONSTANTS } from '../auth.constants';
 
-/**
- * Strategy riêng cho logout: giống jwt nhưng ignoreExpiration = true.
- * Cho phép đọc userId từ token đã hết hạn để revoke đúng session.
- */
+/* =============================================================================
+ Chien luoc nay y chang JwtStrategy, chi khac la no cho phep token het han
+ ================================================================================*/
+
 @Injectable()
 export class JwtSoftStrategy extends PassportStrategy(Strategy, 'jwt-soft') {
   constructor(configService: ConfigService) {
@@ -19,13 +19,17 @@ export class JwtSoftStrategy extends PassportStrategy(Strategy, 'jwt-soft') {
           request?.cookies?.[AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE] ?? null,
         ExtractJwt.fromAuthHeaderAsBearerToken(),
       ]),
-      ignoreExpiration: true, // ✅ bỏ qua hạn token khi logout
+      ignoreExpiration: true, // Bo qua viec kiem tra het han
       secretOrKey: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
     });
   }
 
   async validate(payload: JwtPayload): Promise<AuthUser | null> {
-    if (!payload?.sub || !payload?.email) return null;
+    if (!payload?.sub || !payload?.email) {
+      return null; 
+      // -> Return null thay vi throw loi -> de req co the den controller
+      // -> Controller se tu xu ly case null
+    }
 
     return {
       id: payload.sub,

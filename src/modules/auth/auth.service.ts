@@ -18,11 +18,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import {
   JwtPayload,
-  JwtRefreshPayload,
   GoogleProfile,
   AuthTokens,
   AuthUser,
-} from './interfaces/auth.interface';
+} from './interfaces';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { RegisterDto } from './dto/auth.dto';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -125,7 +124,7 @@ export class AuthService implements OnApplicationBootstrap {
 
     if (user.provider !== PrismaAuthProvider.local || !user.password) {
       throw new BadRequestException(
-        'Tài khoản này đăng nhập bằng mạng xã hội. Vui lòng dùng Google.',
+        'Tài khoản này liên kết Google account. Vui lòng dùng Google login',
       );
     }
 
@@ -224,16 +223,17 @@ export class AuthService implements OnApplicationBootstrap {
    * Nếu token đã dùng rồi (reuse attack) → revoke toàn bộ family.
    */
   async rotateRefreshToken(
-    userId: string,
     oldRawToken: string,
-    payload: JwtRefreshPayload,
+    userData: AuthUser,
   ): Promise<AuthTokens> {
+    const userId = userData.id;
+    const tokenFamily = userData.tokenFamily;
+
     const storedToken = await this.prisma.refreshToken.findFirst({
       where: {
         userId,
-        tokenFamily: payload.tokenFamily,
+        tokenFamily,
         isRevoked: false,
-        expiresAt: { gt: new Date() },
       },
     });
 
@@ -254,6 +254,14 @@ export class AuthService implements OnApplicationBootstrap {
       throw new UnauthorizedException('Refresh token không hợp lệ');
     }
 
+    if (storedToken.expiresAt < new Date()) {
+      await this.prisma.refreshToken.update({
+        where: { id: storedToken.id },
+        data: { isRevoked: true, revokedAt: new Date() },
+      });
+      throw new UnauthorizedException('Refresh token đã hết hạn');
+    }
+
     // Revoke token cũ
     await this.prisma.refreshToken.update({
       where: { id: storedToken.id },
@@ -268,13 +276,16 @@ export class AuthService implements OnApplicationBootstrap {
     const authUser = this.toAuthUser(user);
 
     const [accessToken, newRefreshToken] = await Promise.all([
-      this.signAccessToken(authUser, payload.tokenFamily),
-      this.signRefreshToken(authUser, payload.tokenFamily),
+      this.signAccessToken(authUser, tokenFamily),
+      this.signRefreshToken(authUser, tokenFamily),
     ]);
 
-    await this.saveRefreshToken(userId, newRefreshToken, payload.tokenFamily);
+    await this.saveRefreshToken(userId, newRefreshToken, tokenFamily);
 
-    return { accessToken, refreshToken: newRefreshToken };
+    return { 
+      accessToken, 
+      refreshToken: newRefreshToken 
+    };
   }
 
   async logout(userId: string, tokenFamily: string): Promise<void> {
@@ -326,7 +337,7 @@ export class AuthService implements OnApplicationBootstrap {
     user: AuthUser,
     tokenFamily: string,
   ): Promise<string> {
-    const payload: JwtRefreshPayload = {
+    const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
       firstName: user.firstName,

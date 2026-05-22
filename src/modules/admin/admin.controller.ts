@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { Roles } from '@modules/auth/decorators';
-import { UserRole } from '@modules/auth/interfaces/auth.interface';
+import { UserRole } from '@modules/auth/interfaces';
 import { AdminService } from './admin.service';
 import {
   QueryAdminReportsDto,

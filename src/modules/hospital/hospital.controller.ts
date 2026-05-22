@@ -17,7 +17,7 @@ import {
   QueryHospitalDto,
 } from './dto/hospital.dto';
 import { Public, Roles } from '@modules/auth/decorators';
-import { UserRole } from '@modules/auth/interfaces/auth.interface';
+import { UserRole } from '@modules/auth/interfaces';
 
 // ─────────────────────────────────────────────────────────────
 //  PUBLIC Controller  →  /api/v1/hospitals

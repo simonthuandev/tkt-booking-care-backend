@@ -24,8 +24,7 @@ import { Public, CurrentUser, Roles } from './decorators';
 import {
   UserRole,
   AuthUser,
-  JwtRefreshPayload,
-} from './interfaces/auth.interface';
+} from './interfaces';
 import {
   AUTH_CONSTANTS,
   ACCESS_COOKIE_OPTIONS,
@@ -34,6 +33,7 @@ import {
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import { identity } from 'rxjs';
 
 @Controller('auth')
 export class AuthController {
@@ -79,8 +79,6 @@ export class AuthController {
     );
 
     if (!user) {
-      // Dùng NestJS exception thay vì throw object thô
-      // Thông báo chung chung — không tiết lộ email hay password sai
       throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
     }
 
@@ -105,9 +103,7 @@ export class AuthController {
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
   @SkipThrottle()
-  googleLogin() {
-    // Passport tự redirect sang Google — không cần body
-  }
+  googleLogin() {}
 
   @Public()
   @Get('google/callback')
@@ -126,7 +122,7 @@ export class AuthController {
       );
     }
   }
-
+  
   // ─── Token Refresh ───────────────────────────────────────────────────────────
 
   @Public()
@@ -138,13 +134,12 @@ export class AuthController {
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const payload = req.refreshPayload as JwtRefreshPayload;
+    const userData = req.user as AuthUser;
     const rawToken = req.rawRefreshToken as string;
 
     const tokens = await this.authService.rotateRefreshToken(
-      payload.sub,
       rawToken,
-      payload,
+      userData,
     );
 
     this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
@@ -193,7 +188,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @SkipThrottle()
   getMe(@CurrentUser() user: AuthUser) {
-    return { user };
+    return {
+      message: 'Lấy thông tin người dùng thành công',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
   }
 
   // ─── Admin Only ──────────────────────────────────────────────────────────────
@@ -202,7 +206,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN)
   adminOnlyRoute(@CurrentUser() user: AuthUser) {
-    return { message: 'Chào admin!', user };
+    return { 
+      message: 'Chào admin!', 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
   }
 
   // ─── Cookie Helpers ──────────────────────────────────────────────────────────
@@ -226,13 +239,6 @@ export class AuthController {
 
   private clearTokenCookies(res: Response): void {
     res.clearCookie(AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
-    /**
-     * nếu refresh token cookie không dùng path riêng thì clear đơn giản như này là đủ
-     */
     res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
-    //  res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
-    //    ...COOKIE_OPTIONS,
-    //    path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH
-    //  });
   }
 }

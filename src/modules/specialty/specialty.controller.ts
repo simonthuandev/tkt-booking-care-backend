@@ -17,7 +17,7 @@ import {
   QuerySpecialtyDto,
 } from './dto/specialty.dto';
 import { Public, Roles } from '@modules/auth/decorators';
-import { UserRole } from '@modules/auth/interfaces/auth.interface';
+import { UserRole } from '@modules/auth/interfaces';
 
 // ─────────────────────────────────────────────────────────────
 //  PUBLIC Controller  →  GET /api/v1/specialties

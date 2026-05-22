@@ -3,6 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: tkt-bookingcare-db
     restart: always
+    # restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}

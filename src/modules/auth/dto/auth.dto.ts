@@ -9,8 +9,8 @@ import {
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
-  @IsEmail({}, { message: 'Email không hợp lệ' })
   @Transform(({ value }) => value?.toLowerCase().trim())
+  @IsEmail({}, { message: 'Email không hợp lệ' })
   email!: string;
 
   @IsString()
@@ -22,28 +22,28 @@ export class RegisterDto {
   })
   password!: string;
 
+  @Transform(({ value }) => value?.trim())
   @IsString()
   @IsNotEmpty()
   @MinLength(2, { message: 'Tên phải có ít nhất 2 ký tự' })
   @MaxLength(50, { message: 'Tên không được vượt quá 50 ký tự' })
-  @Transform(({ value }) => value?.trim())
   firstName!: string;
 
+  @Transform(({ value }) => value?.trim())
   @IsString()
   @IsNotEmpty()
   @MinLength(2, { message: 'Họ phải có ít nhất 2 ký tự' })
   @MaxLength(50, { message: 'Họ không được vượt quá 50 ký tự' })
-  @Transform(({ value }) => value?.trim())
   lastName!: string;
 }
 
 export class LoginDto {
-  @IsEmail({}, { message: 'Email không hợp lệ' })
   @Transform(({ value }) => value?.toLowerCase().trim())
+  @IsEmail({}, { message: 'Email không hợp lệ' })
   email!: string;
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(64)
+  @MaxLength(64, { message: 'Mật khẩu không được vượt quá 64 ký tự' })
   password!: string;
 }

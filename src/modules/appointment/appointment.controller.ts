@@ -19,7 +19,7 @@ import {
   QueryAdminAppointmentsDto,
 } from './dto/appointment.dto';
 import { Roles, CurrentUser } from '@modules/auth/decorators';
-import { UserRole, AuthUser } from '@modules/auth/interfaces/auth.interface';
+import { UserRole, AuthUser } from '@modules/auth/interfaces';
 
 // ─────────────────────────────────────────────────────────────
 //  USER Controller

@@ -15,7 +15,7 @@ import {
   QueryAdminMedicalRecordsDto,
 } from './dto/medical-record.dto';
 import { Roles, CurrentUser } from '@modules/auth/decorators';
-import { UserRole, AuthUser } from '@modules/auth/interfaces/auth.interface';
+import { UserRole, AuthUser } from '@modules/auth/interfaces';
 
 // ─────────────────────────────────────────────────────────────
 //  DOCTOR Controller
