@@ -16,12 +16,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
-import {
-  JwtPayload,
-  GoogleProfile,
-  AuthTokens,
-  AuthUser,
-} from './interfaces';
+import { JwtPayload, GoogleProfile, AuthTokens, AuthUser } from './interfaces';
 import { AUTH_CONSTANTS } from './auth.constants';
 import { RegisterDto } from './dto/auth.dto';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -282,9 +277,9 @@ export class AuthService implements OnApplicationBootstrap {
 
     await this.saveRefreshToken(userId, newRefreshToken, tokenFamily);
 
-    return { 
-      accessToken, 
-      refreshToken: newRefreshToken 
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
     };
   }
 

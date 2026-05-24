@@ -68,9 +68,18 @@ export class CreateDoctorDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
-  @Transform(({ value }) => value?.trim())
-  bio?: string;
+  @MaxLength(500)
+  imgURL?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  information?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  treatment?: string[];
 
   @IsOptional()
   @IsInt({ message: 'Số năm kinh nghiệm phải là số nguyên' })
@@ -173,9 +182,18 @@ export class UpdateDoctorDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
-  @Transform(({ value }) => value?.trim())
-  bio?: string;
+  @MaxLength(500)
+  imgURL?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  information?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  treatment?: string[];
 
   @IsOptional()
   @IsInt()
@@ -237,9 +255,18 @@ export class UpdateDoctorSelfDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(2000)
-  @Transform(({ value }) => value?.trim())
-  bio?: string;
+  @MaxLength(500)
+  imgURL?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  information?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  treatment?: string[];
 
   // Bác sĩ KHÔNG được tự đổi: slug, licenseNumber, isVerified, isActive, specialtyIds
 }

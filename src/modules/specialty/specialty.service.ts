@@ -67,47 +67,67 @@ export class SpecialtyService {
   /**
    * GET /specialties
    * Trả về danh sách chuyên khoa (mặc định chỉ active).
-   * Kèm _count bác sĩ để frontend hiển thị "X bác sĩ".
+   * Kèm _count bác sĩ để frontend hiển thị "X bác sĩ" và hỗ trợ phân trang.
    */
   async findAll(query: QuerySpecialtyDto) {
-    const { search, isActive } = query;
+    const { search, isActive, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-    return this.prisma.specialty.findMany({
-      where: {
-        // Mặc định isActive = true nếu không truyền
-        isActive: isActive !== undefined ? isActive : true,
-        ...(search && {
-          name: {
-            contains: search,
-            mode: 'insensitive', // case-insensitive search
-          },
-        }),
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        icon: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: {
-            // Chỉ đếm bác sĩ đang active và đã verified
-            doctors: {
-              where: {
-                doctor: {
-                  isActive: true,
-                  isVerified: true,
+    const where = {
+      // Mặc định isActive = true nếu không truyền
+      isActive: isActive !== undefined ? isActive : true,
+      ...(search && {
+        name: {
+          contains: search,
+          mode: 'insensitive' as const, // case-insensitive search
+        },
+      }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.specialty.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          imgURL: true,
+          diseases: true,
+          information: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              // Chỉ đếm bác sĩ đang active và đã verified
+              doctors: {
+                where: {
+                  doctor: {
+                    isActive: true,
+                    isVerified: true,
+                  },
                 },
               },
             },
           },
         },
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.specialty.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { name: 'asc' },
-    });
+    };
   }
 
   /**
@@ -122,7 +142,9 @@ export class SpecialtyService {
         name: true,
         slug: true,
         description: true,
-        icon: true,
+        imgURL: true,
+        diseases: true,
+        information: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -139,7 +161,7 @@ export class SpecialtyService {
               select: {
                 id: true,
                 slug: true,
-                bio: true,
+                imgURL: true,
                 experience: true,
                 consultationFee: true,
                 rating: true,
@@ -183,37 +205,57 @@ export class SpecialtyService {
 
   /**
    * GET /admin/specialties
-   * Admin xem tất cả specialty kể cả inactive + filter linh hoạt.
+   * Admin xem tất cả specialty kể cả inactive + filter linh hoạt + phân trang.
    */
   async adminFindAll(query: QuerySpecialtyDto) {
-    const { search, isActive } = query;
+    const { search, isActive, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
 
-    return this.prisma.specialty.findMany({
-      where: {
-        // Admin không filter isActive mặc định
-        ...(isActive !== undefined && { isActive }),
-        ...(search && {
-          name: {
-            contains: search,
-            mode: 'insensitive',
-          },
-        }),
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        icon: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: {
-          select: { doctors: true }, // Admin xem tổng số bác sĩ, không lọc
+    const where = {
+      // Admin không filter isActive mặc định
+      ...(isActive !== undefined && { isActive }),
+      ...(search && {
+        name: {
+          contains: search,
+          mode: 'insensitive' as const,
         },
+      }),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.specialty.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          imgURL: true,
+          diseases: true,
+          information: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { doctors: true }, // Admin xem tổng số bác sĩ, không lọc
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.specialty.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
   /**
@@ -230,7 +272,9 @@ export class SpecialtyService {
         name: dto.name,
         slug,
         description: dto.description,
-        icon: dto.icon,
+        imgURL: dto.imgURL,
+        diseases: dto.diseases ?? [],
+        information: dto.information ?? [],
       },
     });
   }
@@ -253,7 +297,9 @@ export class SpecialtyService {
         ...(dto.name && { name: dto.name }),
         ...(slug && { slug }),
         ...(dto.description !== undefined && { description: dto.description }),
-        ...(dto.icon !== undefined && { icon: dto.icon }),
+        ...(dto.imgURL !== undefined && { imgURL: dto.imgURL }),
+        ...(dto.diseases !== undefined && { diseases: dto.diseases }),
+        ...(dto.information !== undefined && { information: dto.information }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });

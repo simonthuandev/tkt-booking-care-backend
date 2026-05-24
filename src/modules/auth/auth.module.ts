@@ -16,10 +16,10 @@ import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
-    /** 
+    /**
      * server khong luu session, chỉ dua vao token gui tu client
-    */
-    PassportModule.register({ session: false }), 
+     */
+    PassportModule.register({ session: false }),
     /**
      * khong can secret va options vi moi strategy tu config rieng
      * nhung van can JwtModule empty o day de co the inject JwtService vao AuthService

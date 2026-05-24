@@ -22,13 +22,18 @@ export interface RefreshTokenRequest extends Request {
 }
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(configService: ConfigService) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         // Uu tien lay tu cookie truoc
         (request: Request) => {
-          return request?.cookies?.[AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE] ?? null;
+          return (
+            request?.cookies?.[AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE] ?? null
+          );
         },
         // Neu khong co cookie, thi lay tu header Authorization
         ExtractJwt.fromAuthHeaderAsBearerToken(),

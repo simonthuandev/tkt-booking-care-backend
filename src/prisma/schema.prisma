@@ -65,8 +65,7 @@ enum PaymentStatus {
 
 enum PaymentProvider {
   vn_pay
-  momo
-  stripe
+  cash
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -148,7 +147,9 @@ model Specialty {
   name        String   @unique
   slug        String   @unique
   description String?
-  icon        String? // tên icon hoặc URL
+  imgURL      String?
+  diseases    String[]
+  information String[]
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -165,19 +166,17 @@ model Specialty {
 // ─────────────────────────────────────────────────────────────
 
 model Hospital {
-  id           String       @id @default(uuid())
-  name         String       @unique
-  slug         String       @unique
-  address      String
-  city         String
-  type         HospitalType @default(public)
-  avatar       String?
-  description  String?
-  rating       Float        @default(0) // cached
-  totalReviews Int          @default(0) // cached
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id          String       @id @default(uuid())
+  name        String       @unique
+  slug        String       @unique
+  address     String
+  city        String
+  type        HospitalType @default(public)
+  imgURL      String?
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // Relations
   doctors      DoctorHospital[]
@@ -198,7 +197,9 @@ model Doctor {
   id              String   @id @default(uuid())
   userId          String   @unique
   slug            String   @unique // VD: nguyen-thi-lan-d4f2
-  bio             String?
+  imgURL          String?
+  information     String[]
+  treatment       String[]
   experience      Int      @default(0) // số năm kinh nghiệm
   licenseNumber   String?  @unique
   consultationFee Float    @default(0)

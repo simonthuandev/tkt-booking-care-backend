@@ -42,7 +42,7 @@ export class SearchService {
         select: {
           id: true,
           slug: true,
-          bio: true,
+          imgURL: true,
           experience: true,
           consultationFee: true,
           rating: true,
@@ -111,10 +111,8 @@ export class SearchService {
           address: true,
           city: true,
           type: true,
-          avatar: true,
+          imgURL: true,
           description: true,
-          rating: true,
-          totalReviews: true,
           _count: {
             select: {
               doctors: {
@@ -126,7 +124,7 @@ export class SearchService {
             },
           },
         },
-        orderBy: [{ rating: 'desc' }, { name: 'asc' }],
+        orderBy: [{ name: 'asc' }],
         take,
         skip,
       }),
@@ -161,7 +159,7 @@ export class SearchService {
           name: true,
           slug: true,
           description: true,
-          icon: true,
+          imgURL: true,
           _count: {
             select: {
               doctors: {
@@ -235,4 +233,3 @@ export class SearchService {
     };
   }
 }
-

@@ -340,7 +340,7 @@ export class AdminService {
       }),
       this.prisma.hospital.findMany({
         where: { id: { in: topHospitalsRaw.map((h) => h.hospitalId) } },
-        select: { 
+        select: {
           id: true,
           name: true,
           slug: true,
@@ -349,7 +349,9 @@ export class AdminService {
       }),
     ]);
 
-    const doctorById = new Map(topDoctorProfiles.map((item) => [item.id, item]));
+    const doctorById = new Map(
+      topDoctorProfiles.map((item) => [item.id, item]),
+    );
     const hospitalById = new Map(
       topHospitalProfiles.map((item) => [item.id, item]),
     );
@@ -432,15 +434,8 @@ export class AdminService {
   }
 
   async findAllUsers(query: QueryAdminUsersDto) {
-    const {
-      search,
-      role,
-      provider,
-      isActive,
-      isEmailVerified,
-      page,
-      limit,
-    } = query;
+    const { search, role, provider, isActive, isEmailVerified, page, limit } =
+      query;
     const { take, skip } = this.getPagination(page, limit);
 
     const where: Prisma.UserWhereInput = {
@@ -581,7 +576,9 @@ export class AdminService {
       });
 
       if (activeAdminCount <= 1) {
-        throw new ConflictException('Không thể khóa admin cuối cùng của hệ thống');
+        throw new ConflictException(
+          'Không thể khóa admin cuối cùng của hệ thống',
+        );
       }
     }
 
@@ -617,4 +614,3 @@ export class AdminService {
     return this.getUserById(userId);
   }
 }
-

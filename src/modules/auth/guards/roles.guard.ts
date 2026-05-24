@@ -13,11 +13,13 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(
-    context: ExecutionContext // context co the la HTTP, WebSocket, GraphQL,...
+    context: ExecutionContext, // context co the la HTTP, WebSocket, GraphQL,...
   ): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(ROLES_KEY, [
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+      ROLES_KEY,
+      [
         context.getHandler(), // xet method truoc
-        context.getClass() // neu method khong co thi xet class (controller)
+        context.getClass(), // neu method khong co thi xet class (controller)
       ],
     );
 

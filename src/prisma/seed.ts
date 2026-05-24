@@ -126,7 +126,7 @@ async function main() {
         name: 'Tim mạch',
         slug: 'tim-mach',
         description: 'Chẩn đoán và điều trị các bệnh về tim và mạch máu.',
-        icon: 'faHeart',
+        imgURL: '',
         isActive: true,
       },
     }),
@@ -137,7 +137,7 @@ async function main() {
         name: 'Nhi khoa',
         slug: 'nhi-khoa',
         description: 'Chăm sóc sức khỏe trẻ em từ sơ sinh đến 18 tuổi.',
-        icon: 'faBaby',
+        imgURL: '',
         isActive: true,
       },
     }),
@@ -148,7 +148,7 @@ async function main() {
         name: 'Da liễu',
         slug: 'da-lieu',
         description: 'Điều trị các bệnh về da, tóc và móng.',
-        icon: 'faBandage',
+        imgURL: '',
         isActive: true,
       },
     }),
@@ -156,7 +156,7 @@ async function main() {
 
   console.log(`✅ Specialties: ${specialties.length} records`);
 
-  // ── 2. Hospitals ────────────────────────────────────────────
+  // ── 2. Hospitals (3 bản ghi) ────────────────────────────────
 
   const hospitals = await Promise.all([
     prisma.hospital.upsert({
@@ -169,8 +169,6 @@ async function main() {
         city: 'TP. Hồ Chí Minh',
         type: HospitalType.public,
         description: 'Bệnh viện đa khoa lớn nhất khu vực phía Nam.',
-        rating: 0,
-        totalReviews: 0,
         isActive: true,
       },
     }),
@@ -184,8 +182,19 @@ async function main() {
         city: 'Hà Nội',
         type: HospitalType.private,
         description: 'Hệ thống bệnh viện đa khoa quốc tế Vinmec.',
-        rating: 0,
-        totalReviews: 0,
+        isActive: true,
+      },
+    }),
+    prisma.hospital.upsert({
+      where: { slug: 'benh-vien-bach-mai' },
+      update: {},
+      create: {
+        name: 'Bệnh viện Bạch Mai',
+        slug: 'benh-vien-bach-mai',
+        address: '78 Giải Phóng, Phương Mai, Đống Đa',
+        city: 'Hà Nội',
+        type: HospitalType.public,
+        description: 'Bệnh viện đa khoa hạng đặc biệt đầu tiên của cả nước.',
         isActive: true,
       },
     }),
@@ -278,7 +287,9 @@ async function main() {
       create: {
         userId: doctorUser.id,
         slug,
-        bio: d.bio,
+        imgURL: '',
+        information: [d.bio],
+        treatment: [],
         experience: d.experience,
         licenseNumber: d.licenseNumber,
         consultationFee: d.consultationFee,
@@ -333,44 +344,108 @@ async function main() {
     );
   }
 
-  // ── 5. Regular User + PatientProfile ────────────────────────
+  // ── 5. Regular Users + PatientProfiles (3 bản ghi) ──────────
 
-  const regularUser = await prisma.user.upsert({
-    where: { email: 'user@example.com' },
-    update: {},
-    create: {
-      email: 'user@example.com',
-      password: await hash('User@123456'),
-      firstName: 'Mai',
-      lastName: 'Nguyễn Thị',
-      role: UserRole.user,
-      provider: AuthProvider.local,
-      isActive: true,
-      isEmailVerified: true,
+  const userData = [
+    {
+      email: 'user1@example.com',
+      first: 'Mai',
+      last: 'Nguyễn Thị',
+      obj: Gender.female,
     },
-  });
+    {
+      email: 'user2@example.com',
+      first: 'Tuấn',
+      last: 'Trần Văn',
+      obj: Gender.male,
+    },
+    {
+      email: 'user3@example.com',
+      first: 'Hoa',
+      last: 'Lê Thị',
+      obj: Gender.female,
+    },
+  ];
 
-  // PatientProfile mặc định (bản thân)
-  const existingProfile = await prisma.patientProfile.findFirst({
-    where: { userId: regularUser.id, relationship: Relationship.self },
-  });
+  const patientProfiles: any[] = [];
 
-  if (!existingProfile) {
-    await prisma.patientProfile.create({
-      data: {
-        userId: regularUser.id,
-        fullName: 'Nguyễn Thị Mai',
-        dob: new Date('1995-05-15'),
-        gender: Gender.female,
-        phoneNumber: '0901234567',
-        address: '123 Nguyễn Văn Cừ, Quận 5, TP.HCM',
-        relationship: Relationship.self,
-        isDefault: true,
+  for (const u of userData) {
+    const user = await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: {
+        email: u.email,
+        password: await hash('User@123456'),
+        firstName: u.first,
+        lastName: u.last,
+        role: UserRole.user,
+        provider: AuthProvider.local,
+        isActive: true,
+        isEmailVerified: true,
       },
     });
-  }
 
-  console.log(`✅ Regular User: ${regularUser.email}`);
+    let profile = await prisma.patientProfile.findFirst({
+      where: { userId: user.id, relationship: Relationship.self },
+    });
+
+    if (!profile) {
+      profile = await prisma.patientProfile.create({
+        data: {
+          userId: user.id,
+          fullName: `${u.last} ${u.first}`,
+          dob: new Date('1995-05-15'),
+          gender: u.obj,
+          phoneNumber: '0901234567',
+          address: '123 Nguyễn Văn Cừ, Quận 5, TP.HCM',
+          relationship: Relationship.self,
+          isDefault: true,
+        },
+      });
+    }
+    patientProfiles.push(profile);
+  }
+  console.log(`✅ Regular Users: 3 records`);
+
+  // ── 6. Tạo Appointments để test thanh toán (3 bản ghi) ────────
+
+  const doctorsList = await prisma.doctor.findMany({
+    include: { specialties: true },
+  });
+  const testAppointments: any[] = [];
+
+  for (let i = 0; i < 3; i++) {
+    const doctor = doctorsList[i % doctorsList.length];
+    const patientProfile = patientProfiles[i];
+
+    // Lấy 1 slot trống tương ứng của bác sĩ
+    const slot = await prisma.timeSlot.findFirst({
+      where: { doctorId: doctor.id, isBooked: false, isBlocked: false },
+    });
+
+    if (slot) {
+      // Đánh dấu slot đã được đặt
+      await prisma.timeSlot.update({
+        where: { id: slot.id },
+        data: { isBooked: true },
+      });
+
+      // Tạo lịch hẹn với trạng thái thanh toán chờ (pending)
+      const appointment = await prisma.appointment.create({
+        data: {
+          patientProfileId: patientProfile.id,
+          doctorId: doctor.id,
+          hospitalId: slot.hospitalId,
+          timeSlotId: slot.id,
+          status: 'pending',
+          paymentStatus: 'pending',
+          totalAmount: doctor.consultationFee,
+          reason: 'Khám kiểm tra sức khỏe tổng quát (Dữ liệu Test Thanh Toán)',
+        },
+      });
+      testAppointments.push(appointment);
+    }
+  }
 
   // ── Summary ─────────────────────────────────────────────────
 
@@ -379,7 +454,14 @@ async function main() {
   console.log('Tài khoản demo:');
   console.log('  Admin  : admin@tktbookingcare.vn  / Admin@123456');
   console.log('  Doctor : bs.nguyen.thi.lan@...    / Doctor@123456');
-  console.log('  User   : user@example.com         / User@123456');
+  console.log('  User   : user1@example.com        / User@123456');
+
+  console.log('\n💳 CÁC APPOINTMENT ID ĐỂ TEST THANH TOÁN (STATUS = PENDING):');
+  testAppointments.forEach((app, idx) => {
+    console.log(
+      `   [${idx + 1}]. ID: ${app.id} | Tổng tiền: ${app.totalAmount} VND`,
+    );
+  });
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 

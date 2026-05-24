@@ -19,6 +19,12 @@ CREATE TYPE "AppointmentStatus" AS ENUM ('pending', 'confirmed', 'processing', '
 -- CreateEnum
 CREATE TYPE "CancelledBy" AS ENUM ('patient', 'doctor', 'admin');
 
+-- CreateEnum
+CREATE TYPE "PaymentStatus" AS ENUM ('pending', 'completed', 'failed', 'refunded');
+
+-- CreateEnum
+CREATE TYPE "PaymentProvider" AS ENUM ('vn_pay', 'cash');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -75,7 +81,9 @@ CREATE TABLE "Specialty" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
-    "icon" TEXT,
+    "imgURL" TEXT,
+    "diseases" TEXT[],
+    "information" TEXT[],
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -91,10 +99,8 @@ CREATE TABLE "Hospital" (
     "address" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "type" "HospitalType" NOT NULL DEFAULT 'public',
-    "avatar" TEXT,
+    "imgURL" TEXT,
     "description" TEXT,
-    "rating" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "totalReviews" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -107,7 +113,9 @@ CREATE TABLE "Doctor" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "bio" TEXT,
+    "imgURL" TEXT,
+    "information" TEXT[],
+    "treatment" TEXT[],
     "experience" INTEGER NOT NULL DEFAULT 0,
     "licenseNumber" TEXT,
     "consultationFee" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -165,6 +173,8 @@ CREATE TABLE "Appointment" (
     "hospitalId" TEXT NOT NULL,
     "timeSlotId" TEXT NOT NULL,
     "status" "AppointmentStatus" NOT NULL DEFAULT 'pending',
+    "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'pending',
+    "totalAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "reason" TEXT,
     "cancelReason" TEXT,
     "cancelledBy" "CancelledBy",
@@ -172,21 +182,6 @@ CREATE TABLE "Appointment" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Appointment_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "MedicalRecord" (
-    "id" TEXT NOT NULL,
-    "appointmentId" TEXT NOT NULL,
-    "patientProfileId" TEXT NOT NULL,
-    "doctorId" TEXT NOT NULL,
-    "diagnosis" TEXT,
-    "prescription" TEXT,
-    "notes" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "MedicalRecord_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -205,21 +200,17 @@ CREATE TABLE "Review" (
 );
 
 -- CreateTable
-CREATE TABLE "News" (
+CREATE TABLE "Payment" (
     "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "slug" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
-    "excerpt" TEXT,
-    "thumbnail" TEXT,
-    "category" TEXT,
-    "authorId" TEXT NOT NULL,
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "publishedAt" TIMESTAMP(3),
+    "appointmentId" TEXT NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "provider" "PaymentProvider" NOT NULL,
+    "transactionId" TEXT,
+    "status" "PaymentStatus" NOT NULL DEFAULT 'pending',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "News_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Payment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -307,6 +298,9 @@ CREATE INDEX "TimeSlot_hospitalId_date_idx" ON "TimeSlot"("hospitalId", "date");
 CREATE INDEX "TimeSlot_isBooked_isBlocked_idx" ON "TimeSlot"("isBooked", "isBlocked");
 
 -- CreateIndex
+CREATE INDEX "TimeSlot_doctorId_isBooked_isBlocked_idx" ON "TimeSlot"("doctorId", "isBooked", "isBlocked");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "TimeSlot_doctorId_date_startTime_key" ON "TimeSlot"("doctorId", "date", "startTime");
 
 -- CreateIndex
@@ -328,13 +322,7 @@ CREATE INDEX "Appointment_status_idx" ON "Appointment"("status");
 CREATE INDEX "Appointment_createdAt_idx" ON "Appointment"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "MedicalRecord_appointmentId_key" ON "MedicalRecord"("appointmentId");
-
--- CreateIndex
-CREATE INDEX "MedicalRecord_patientProfileId_idx" ON "MedicalRecord"("patientProfileId");
-
--- CreateIndex
-CREATE INDEX "MedicalRecord_doctorId_idx" ON "MedicalRecord"("doctorId");
+CREATE INDEX "Appointment_doctorId_createdAt_idx" ON "Appointment"("doctorId", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Review_appointmentId_key" ON "Review"("appointmentId");
@@ -349,19 +337,10 @@ CREATE INDEX "Review_hospitalId_isVisible_idx" ON "Review"("hospitalId", "isVisi
 CREATE INDEX "Review_patientProfileId_idx" ON "Review"("patientProfileId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "News_slug_key" ON "News"("slug");
+CREATE INDEX "Payment_appointmentId_idx" ON "Payment"("appointmentId");
 
 -- CreateIndex
-CREATE INDEX "News_slug_idx" ON "News"("slug");
-
--- CreateIndex
-CREATE INDEX "News_isPublished_publishedAt_idx" ON "News"("isPublished", "publishedAt");
-
--- CreateIndex
-CREATE INDEX "News_category_idx" ON "News"("category");
-
--- CreateIndex
-CREATE INDEX "News_authorId_idx" ON "News"("authorId");
+CREATE INDEX "Payment_transactionId_idx" ON "Payment"("transactionId");
 
 -- AddForeignKey
 ALTER TABLE "RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -403,15 +382,6 @@ ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_hospitalId_fkey" FOREIGN K
 ALTER TABLE "Appointment" ADD CONSTRAINT "Appointment_timeSlotId_fkey" FOREIGN KEY ("timeSlotId") REFERENCES "TimeSlot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MedicalRecord" ADD CONSTRAINT "MedicalRecord_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "MedicalRecord" ADD CONSTRAINT "MedicalRecord_patientProfileId_fkey" FOREIGN KEY ("patientProfileId") REFERENCES "PatientProfile"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "MedicalRecord" ADD CONSTRAINT "MedicalRecord_doctorId_fkey" FOREIGN KEY ("doctorId") REFERENCES "Doctor"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Review" ADD CONSTRAINT "Review_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -424,4 +394,4 @@ ALTER TABLE "Review" ADD CONSTRAINT "Review_doctorId_fkey" FOREIGN KEY ("doctorI
 ALTER TABLE "Review" ADD CONSTRAINT "Review_hospitalId_fkey" FOREIGN KEY ("hospitalId") REFERENCES "Hospital"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "News" ADD CONSTRAINT "News_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Payment" ADD CONSTRAINT "Payment_appointmentId_fkey" FOREIGN KEY ("appointmentId") REFERENCES "Appointment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

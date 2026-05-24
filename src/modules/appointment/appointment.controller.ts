@@ -103,10 +103,7 @@ export class AppointmentUserMeController {
    * Chi tiết lịch hẹn — ownership check.
    */
   @Get(':id')
-  async findOne(
-    @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
-  ) {
+  async findOne(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const data = await this.appointmentService.findMyAppointmentById(
       user.id,
       id,
@@ -236,10 +233,7 @@ export class AppointmentAdminController {
    * Admin huỷ lịch hẹn — có thêm cancelReason.
    */
   @Patch(':id/cancel')
-  async cancel(
-    @Param('id') id: string,
-    @Body() dto: CancelAppointmentDto,
-  ) {
+  async cancel(@Param('id') id: string, @Body() dto: CancelAppointmentDto) {
     const data = await this.appointmentService.cancelByAdmin(id, dto);
     return {
       message: 'Huỷ lịch hẹn thành công',

@@ -92,17 +92,17 @@ export class ReviewService {
   private async recalcHospitalRating(hospitalId: string): Promise<void> {
     const result = await this.prisma.review.aggregate({
       where: { hospitalId, isVisible: true },
-      _avg: { rating: true },
       _count: { id: true },
     });
 
-    await this.prisma.hospital.update({
-      where: { id: hospitalId },
-      data: {
-        rating: Math.round((result._avg.rating ?? 0) * 10) / 10,
-        totalReviews: result._count.id,
-      },
-    });
+    // Không cập nhật vào Hospital model nữa vì đã bỏ field: rating và totalReviews
+    // await this.prisma.hospital.update({
+    //   where: { id: hospitalId },
+    //   data: {
+    //     rating: Math.round((result._avg.rating ?? 0) * 10) / 10,
+    //     totalReviews: result._count.id,
+    //   },
+    // });
   }
 
   // ─── User APIs ─────────────────────────────────────────────
@@ -166,7 +166,7 @@ export class ReviewService {
         },
         select: REVIEW_SELECT,
       });
-      
+
       // Recalc Doctor Rating inline
       const doctorAgg = await tx.review.aggregate({
         where: { doctorId: appointment.doctorId, isVisible: true },
@@ -185,17 +185,17 @@ export class ReviewService {
       // Recalc Hospital Rating inline
       const hospitalAgg = await tx.review.aggregate({
         where: { hospitalId: appointment.hospitalId, isVisible: true },
-        _avg: { rating: true },
         _count: { id: true },
       });
 
-      await tx.hospital.update({
-        where: { id: appointment.hospitalId },
-        data: {
-          rating: Math.round((hospitalAgg._avg.rating ?? 0) * 10) / 10,
-          totalReviews: hospitalAgg._count.id,
-        },
-      });
+      // Bỏ update hospital rating vì đã xóa column
+      // await tx.hospital.update({
+      //   where: { id: appointment.hospitalId },
+      //   data: {
+      //     rating: Math.round((hospitalAgg._avg.rating ?? 0) * 10) / 10,
+      //     totalReviews: hospitalAgg._count.id,
+      //   },
+      // });
 
       return created;
     });

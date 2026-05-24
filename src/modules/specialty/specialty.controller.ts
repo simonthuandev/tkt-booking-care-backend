@@ -34,10 +34,10 @@ export class SpecialtyPublicController {
    */
   @Get()
   async findAll(@Query() query: QuerySpecialtyDto) {
-    const data = await this.specialtyService.findAll(query);
+    const result = await this.specialtyService.findAll(query);
     return {
       message: 'Lấy danh sách chuyên khoa thành công',
-      data,
+      ...result,
     };
   }
 
@@ -70,10 +70,10 @@ export class SpecialtyAdminController {
    */
   @Get()
   async findAll(@Query() query: QuerySpecialtyDto) {
-    const data = await this.specialtyService.adminFindAll(query);
+    const result = await this.specialtyService.adminFindAll(query);
     return {
       message: 'Lấy danh sách chuyên khoa thành công',
-      data,
+      ...result,
     };
   }
 

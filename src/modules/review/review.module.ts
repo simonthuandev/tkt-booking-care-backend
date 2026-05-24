@@ -9,10 +9,10 @@ import {
 
 @Module({
   controllers: [
-    ReviewPublicController,  // GET /reviews
-    ReviewUserController,    // POST /reviews
-    ReviewUserMeController,  // GET /users/me/reviews
-    ReviewAdminController,   // GET|PATCH /admin/reviews
+    ReviewPublicController, // GET /reviews
+    ReviewUserController, // POST /reviews
+    ReviewUserMeController, // GET /users/me/reviews
+    ReviewAdminController, // GET|PATCH /admin/reviews
   ],
   providers: [ReviewService],
   exports: [ReviewService],

@@ -26,7 +26,7 @@ export class JwtSoftStrategy extends PassportStrategy(Strategy, 'jwt-soft') {
 
   async validate(payload: JwtPayload): Promise<AuthUser | null> {
     if (!payload?.sub || !payload?.email) {
-      return null; 
+      return null;
       // -> Return null thay vi throw loi -> de req co the den controller
       // -> Controller se tu xu ly case null
     }

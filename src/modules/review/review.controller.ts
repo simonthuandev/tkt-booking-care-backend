@@ -60,10 +60,7 @@ export class ReviewUserController {
    * 1 appointment chỉ được review 1 lần.
    */
   @Post()
-  async create(
-    @CurrentUser() user: AuthUser,
-    @Body() dto: CreateReviewDto,
-  ) {
+  async create(@CurrentUser() user: AuthUser, @Body() dto: CreateReviewDto) {
     const data = await this.reviewService.create(user.id, dto);
     return {
       message: 'Đánh giá thành công',

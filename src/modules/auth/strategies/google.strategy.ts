@@ -65,7 +65,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       // Tra user ve cho Guard
       done(null, user);
-      
     } catch (error) {
       // throw loi ve cho Guard
       done(error as Error, false);

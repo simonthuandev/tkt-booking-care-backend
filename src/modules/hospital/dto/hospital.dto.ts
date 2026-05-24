@@ -56,7 +56,7 @@ export class CreateHospitalDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  avatar?: string;
+  imgURL?: string;
 
   @IsOptional()
   @IsString()
@@ -104,7 +104,7 @@ export class UpdateHospitalDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
-  avatar?: string;
+  imgURL?: string;
 
   @IsOptional()
   @IsString()

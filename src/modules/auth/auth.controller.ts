@@ -21,10 +21,7 @@ import {
   JwtSoftAuthGuard,
 } from './guards/auth.guard';
 import { Public, CurrentUser, Roles } from './decorators';
-import {
-  UserRole,
-  AuthUser,
-} from './interfaces';
+import { UserRole, AuthUser } from './interfaces';
 import {
   AUTH_CONSTANTS,
   ACCESS_COOKIE_OPTIONS,
@@ -39,11 +36,14 @@ import { identity } from 'rxjs';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-// ─── Local Auth ─────────────────────────────────────────────────────────────
+  // ─── Local Auth ─────────────────────────────────────────────────────────────
 
   @Public()
   @Post('register')
-  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
+  @Throttle({
+    short: { ttl: 1000, limit: 3 },
+    medium: { ttl: 60000, limit: 10 },
+  })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -68,7 +68,10 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ short: { ttl: 1000, limit: 3 }, medium: { ttl: 60000, limit: 10 } })
+  @Throttle({
+    short: { ttl: 1000, limit: 3 },
+    medium: { ttl: 60000, limit: 10 },
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -122,14 +125,17 @@ export class AuthController {
       );
     }
   }
-  
+
   // ─── Token Refresh ───────────────────────────────────────────────────────────
 
   @Public()
   @Post('refresh')
   @UseGuards(JwtRefreshGuard)
   @HttpCode(HttpStatus.OK)
-  @Throttle({ short: { ttl: 1000, limit: 5 }, medium: { ttl: 60000, limit: 30 } })
+  @Throttle({
+    short: { ttl: 1000, limit: 5 },
+    medium: { ttl: 60000, limit: 30 },
+  })
   async refresh(
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) res: Response,
@@ -206,8 +212,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN)
   adminOnlyRoute(@CurrentUser() user: AuthUser) {
-    return { 
-      message: 'Chào admin!', 
+    return {
+      message: 'Chào admin!',
       user: {
         id: user.id,
         email: user.email,

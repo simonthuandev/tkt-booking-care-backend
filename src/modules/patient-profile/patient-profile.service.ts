@@ -266,7 +266,7 @@ export class PatientProfileService {
         where: { userId, isDefault: true },
         data: { isDefault: false },
       });
-      
+
       // Bước 2: Set profile được chọn thành default
       await tx.patientProfile.update({
         where: { id: profileId },

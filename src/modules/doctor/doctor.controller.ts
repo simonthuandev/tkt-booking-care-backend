@@ -83,7 +83,7 @@ export class DoctorSelfController {
 
   /**
    * PATCH /api/v1/doctors/me/profile
-   * Bác sĩ chỉ được cập nhật: firstName, lastName, avatar, bio.
+   * Bác sĩ chỉ được cập nhật: firstName, lastName, avatar, imgURL, information, treatment.
    */
   @Patch('profile')
   async updateMyProfile(

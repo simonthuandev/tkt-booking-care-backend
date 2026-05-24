@@ -22,7 +22,9 @@ const BCRYPT_SALT_ROUNDS = 12;
 const DOCTOR_CARD_SELECT = {
   id: true,
   slug: true,
-  bio: true,
+  imgURL: true,
+  information: true,
+  treatment: true,
   experience: true,
   consultationFee: true,
   rating: true,
@@ -82,7 +84,7 @@ const DOCTOR_DETAIL_SELECT = {
 
 @Injectable()
 export class DoctorService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   // ─── Helpers ───────────────────────────────────────────────
 
@@ -298,7 +300,11 @@ export class DoctorService {
       this.prisma.doctor.update({
         where: { userId },
         data: {
-          ...(dto.bio !== undefined && { bio: dto.bio }),
+          ...(dto.imgURL !== undefined && { imgURL: dto.imgURL }),
+          ...(dto.information !== undefined && {
+            information: dto.information,
+          }),
+          ...(dto.treatment !== undefined && { treatment: dto.treatment }),
         },
       }),
     ]);
@@ -358,8 +364,9 @@ export class DoctorService {
           consultationFee: true,
           rating: true,
           totalReviews: true,
-          licenseNumber: true,
-          isVerified: true,
+          // licenseNumber: true,
+          // isVerified: true,
+          imgURL: true,
           isActive: true,
           createdAt: true,
           user: {
@@ -447,7 +454,9 @@ export class DoctorService {
         data: {
           userId: user.id,
           slug,
-          bio: dto.bio,
+          imgURL: dto.imgURL || '',
+          information: dto.information || [],
+          treatment: dto.treatment || [],
           experience: dto.experience ?? 0,
           licenseNumber: dto.licenseNumber,
           consultationFee: dto.consultationFee ?? 0,
@@ -527,7 +536,11 @@ export class DoctorService {
         where: { id },
         data: {
           ...(dto.slug && { slug: dto.slug }),
-          ...(dto.bio !== undefined && { bio: dto.bio }),
+          ...(dto.imgURL !== undefined && { imgURL: dto.imgURL }),
+          ...(dto.information !== undefined && {
+            information: dto.information,
+          }),
+          ...(dto.treatment !== undefined && { treatment: dto.treatment }),
           ...(dto.experience !== undefined && { experience: dto.experience }),
           ...(dto.licenseNumber !== undefined && {
             licenseNumber: dto.licenseNumber,

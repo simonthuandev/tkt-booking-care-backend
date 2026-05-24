@@ -6,8 +6,12 @@ import {
   MaxLength,
   MinLength,
   Matches,
+  IsArray,
+  IsInt,
+  Min,
+  Max,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 // ─── Create ──────────────────────────────────────────────────
 
@@ -40,7 +44,17 @@ export class CreateSpecialtyDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  icon?: string;
+  imgURL?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  diseases?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  information?: string[];
 }
 
 // ─── Update ──────────────────────────────────────────────────
@@ -71,7 +85,17 @@ export class UpdateSpecialtyDto {
   @IsOptional()
   @IsString()
   @MaxLength(200)
-  icon?: string;
+  imgURL?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  diseases?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  information?: string[];
 
   @IsOptional()
   @IsBoolean({ message: 'isActive phải là boolean' })
@@ -102,4 +126,17 @@ export class QuerySpecialtyDto {
     return value;
   })
   isActive?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number = 10;
 }

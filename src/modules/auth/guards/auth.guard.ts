@@ -15,7 +15,6 @@ import { Observable } from 'rxjs';
  * Neu oke, dinh user vao req va gui den controller; neu loi thi drop luon
  ======================================================================================*/
 
-
 /*
  * Guard chinh - dung 'jwt' strategy: kiem tra access token hop le khong?
  * Dang ky cho toan bo app trong auth.module, moi request deu qua guard nay
@@ -24,7 +23,7 @@ import { Observable } from 'rxjs';
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(
-    private readonly reflector: Reflector // reflector dung de doc metadata tu @Public
+    private readonly reflector: Reflector, // reflector dung de doc metadata tu @Public
   ) {
     super();
   }
@@ -33,7 +32,6 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(), // xet method truoc
       context.getClass(), // neu method khong co thi xet class (controller)

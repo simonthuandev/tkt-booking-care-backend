@@ -95,7 +95,13 @@ const APPOINTMENT_LIST_SELECT = {
     select: { id: true, name: true, slug: true, address: true, city: true },
   },
   patientProfile: {
-    select: { id: true, fullName: true, dob: true, gender: true, phoneNumber: true },
+    select: {
+      id: true,
+      fullName: true,
+      dob: true,
+      gender: true,
+      phoneNumber: true,
+    },
   },
 } as const;
 
@@ -208,8 +214,8 @@ export class AppointmentService {
           isBooked: true,
           isBlocked: true,
           doctor: {
-            select: { consultationFee: true }
-          }
+            select: { consultationFee: true },
+          },
         },
       });
 
@@ -244,7 +250,9 @@ export class AppointmentService {
       slotDateTime.setHours(slotHour, slotMin, 0, 0);
 
       if (slotDateTime <= new Date()) {
-        throw new BadRequestException('Không thể đặt lịch cho khung giờ đã qua');
+        throw new BadRequestException(
+          'Không thể đặt lịch cho khung giờ đã qua',
+        );
       }
 
       // Kiểm tra user không có lịch hẹn ACTIVE khác với cùng bác sĩ trong cùng ngày
@@ -332,8 +340,15 @@ export class AppointmentService {
       this.prisma.appointment.count({ where }),
     ]);
 
-    const STATUS_PRIORITY = { pending: 0, confirmed: 1, processing: 2, completed: 3, cancelled: 4, no_show: 5 };
-    data.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status])
+    const STATUS_PRIORITY = {
+      pending: 0,
+      confirmed: 1,
+      processing: 2,
+      completed: 3,
+      cancelled: 4,
+      no_show: 5,
+    };
+    data.sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status]);
 
     return {
       data,
@@ -378,7 +393,10 @@ export class AppointmentService {
     }
 
     // Ẩn userId khỏi response
-    const { patientProfile: { userId: _uid, ...profileData }, ...rest } = appt;
+    const {
+      patientProfile: { userId: _uid, ...profileData },
+      ...rest
+    } = appt;
     return { ...rest, patientProfile: profileData };
   }
 
@@ -522,7 +540,9 @@ export class AppointmentService {
     // Nếu bác sĩ cancel → trả lại slot
     const shouldReleaseSlot = dto.status === AppointmentStatus.cancelled;
 
-    const updates: Parameters<typeof this.prisma.appointment.update>[0]['data'] = {
+    const updates: Parameters<
+      typeof this.prisma.appointment.update
+    >[0]['data'] = {
       status: dto.status,
     };
 
@@ -713,10 +733,7 @@ export class AppointmentService {
    * PATCH /admin/appointments/:id/cancel
    * Admin huỷ lịch hẹn — tường minh hơn /status với cancelReason.
    */
-  async cancelByAdmin(
-    appointmentId: string,
-    dto: CancelAppointmentDto,
-  ) {
+  async cancelByAdmin(appointmentId: string, dto: CancelAppointmentDto) {
     const appt = await this.getAppointmentOrThrow(appointmentId);
 
     if (!ADMIN_CANCELLABLE_STATUSES.includes(appt.status)) {
@@ -750,10 +767,7 @@ export class AppointmentService {
    * Dùng nội bộ bởi ReviewService để verify appointment = completed
    * và chưa có review.
    */
-  async verifyCompletedForReview(
-    appointmentId: string,
-    userId: string,
-  ) {
+  async verifyCompletedForReview(appointmentId: string, userId: string) {
     const appt = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },
       select: {
