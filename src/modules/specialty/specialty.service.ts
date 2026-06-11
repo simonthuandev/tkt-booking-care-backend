@@ -75,7 +75,7 @@ export class SpecialtyService {
 
     const where = {
       // Mặc định isActive = true nếu không truyền
-      isActive: isActive !== undefined ? isActive : true,
+      isActive: isActive ?? true,
       ...(search && {
         name: {
           contains: search,
