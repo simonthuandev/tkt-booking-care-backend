@@ -294,6 +294,24 @@ export class QueryDoctorDto {
   city?: string;
 
   @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
+  isVerified?: boolean;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
