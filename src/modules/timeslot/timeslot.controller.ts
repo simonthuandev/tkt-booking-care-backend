@@ -157,20 +157,6 @@ export class TimeSlotAdminController {
   }
 
   /**
-   * DELETE /api/v1/admin/timeslots/:id
-   * Xóa 1 slot chưa được đặt.
-   */
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  async remove(@Param('id') id: string) {
-    const data = await this.timeSlotService.remove(id);
-    return {
-      message: 'Đã xóa time slot thành công',
-      data,
-    };
-  }
-
-  /**
    * DELETE /api/v1/admin/timeslots/bulk
    * Xóa hàng loạt slots chưa đặt trong 1 khoảng thời gian.
    * Body: { doctorId, hospitalId?, fromDate, toDate }
@@ -190,6 +176,20 @@ export class TimeSlotAdminController {
     const data = await this.timeSlotService.bulkRemove(dto);
     return {
       message: data.message,
+      data,
+    };
+  }
+
+  /**
+   * DELETE /api/v1/admin/timeslots/:id
+   * Xóa 1 slot chưa được đặt.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id') id: string) {
+    const data = await this.timeSlotService.remove(id);
+    return {
+      message: 'Đã xóa time slot thành công',
       data,
     };
   }

@@ -103,13 +103,6 @@ const APPOINTMENT_LIST_SELECT = {
       phoneNumber: true,
     },
   },
-} as const;
-
-/**
- * Select đầy đủ cho detail page.
- */
-const APPOINTMENT_DETAIL_SELECT = {
-  ...APPOINTMENT_LIST_SELECT,
   review: {
     select: {
       id: true,
@@ -118,6 +111,13 @@ const APPOINTMENT_DETAIL_SELECT = {
       createdAt: true,
     },
   },
+} as const;
+
+/**
+ * Select đầy đủ cho detail page.
+ */
+const APPOINTMENT_DETAIL_SELECT = {
+  ...APPOINTMENT_LIST_SELECT,
 } as const;
 
 @Injectable()
