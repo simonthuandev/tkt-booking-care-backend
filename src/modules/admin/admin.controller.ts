@@ -74,7 +74,7 @@ export class AdminUsersController {
   @Patch(':id/ban')
   async updateBanStatus(
     @Param('id') id: string,
-                        @Body() dto: UpdateUserBanDto,
+    @Body() dto: UpdateUserBanDto,
   ) {
     const data = await this.adminService.updateUserBanStatus(id, dto);
     return {
