@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import express from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { PrismaClientExceptionFilter } from '@common/filters/prisma-client-exception.filter';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
@@ -15,7 +17,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ─── Security Headers ──────────────────────────────────────────────────────
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // ─── Cookie Parser (bắt buộc để đọc httpOnly cookies) ─────────────────────
   app.use(cookieParser());

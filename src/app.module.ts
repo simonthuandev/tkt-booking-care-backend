@@ -17,6 +17,7 @@ import { ReviewModule } from '@modules/review/review.module';
 import { AdminModule } from '@modules/admin/admin.module';
 import { SearchModule } from '@modules/search/search.module';
 import { PaymentModule } from '@modules/payment/payment.module';
+import { UploadModule } from '@modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PaymentModule } from '@modules/payment/payment.module';
     AdminModule,
     SearchModule,
     PaymentModule,
+    UploadModule,
   ],
 
   providers: [

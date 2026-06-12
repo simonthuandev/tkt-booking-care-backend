@@ -68,6 +68,11 @@ enum PaymentProvider {
   cash
 }
 
+enum AccountTokenType {
+  email_verification
+  password_reset
+}
+
 // ─────────────────────────────────────────────────────────────
 //  USER & AUTH
 // ─────────────────────────────────────────────────────────────
@@ -89,10 +94,26 @@ model User {
 
   // Relations
   refreshTokens   RefreshToken[]
+  accountTokens   AccountToken[]
   patientProfiles PatientProfile[]
   doctorProfile   Doctor?
 
   @@index([role])
+}
+
+model AccountToken {
+  id        String           @id @default(uuid())
+  userId    String
+  tokenHash String
+  type      AccountTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([type, expiresAt])
 }
 
 model RefreshToken {
