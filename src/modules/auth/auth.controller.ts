@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   Res,
@@ -13,10 +14,23 @@ import {
 // import type — chỉ dùng để annotate, không cần ở runtime
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
-import { JwtAuthGuard, JwtRefreshGuard, GoogleOAuthGuard, JwtSoftAuthGuard } from './guards/auth.guard';
+import {
+  ChangePasswordDto,
+  ConfirmPasswordResetDto,
+  ConfirmTokenDto,
+  LoginDto,
+  RegisterDto,
+  RequestPasswordResetDto,
+  UpdateMeDto,
+} from './dto/auth.dto';
+import {
+  JwtAuthGuard,
+  JwtRefreshGuard,
+  GoogleOAuthGuard,
+  JwtSoftAuthGuard,
+} from './guards/auth.guard';
 import { Public, CurrentUser, Roles } from './decorators';
-import { UserRole, AuthUser, JwtRefreshPayload } from './interfaces/auth.interface';
+import { UserRole, AuthUser } from './interfaces';
 import {
   AUTH_CONSTANTS,
   ACCESS_COOKIE_OPTIONS,
@@ -24,17 +38,20 @@ import {
   COOKIE_OPTIONS,
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   // ─── Local Auth ─────────────────────────────────────────────────────────────
 
   @Public()
   @Post('register')
+  @Throttle({
+    short: { ttl: 1000, limit: 3 },
+    medium: { ttl: 60000, limit: 10 },
+  })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) res: Response,
@@ -46,11 +63,11 @@ export class AuthController {
 
     return {
       message: 'Đăng ký thành công',
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        firstName: user.firstName, 
-        lastName: user.lastName, 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role,
       },
     };
@@ -59,6 +76,10 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({
+    short: { ttl: 1000, limit: 3 },
+    medium: { ttl: 60000, limit: 10 },
+  })
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
@@ -69,8 +90,6 @@ export class AuthController {
     );
 
     if (!user) {
-      // Dùng NestJS exception thay vì throw object thô
-      // Thông báo chung chung — không tiết lộ email hay password sai
       throw new UnauthorizedException('Email hoặc mật khẩu không chính xác');
     }
 
@@ -79,12 +98,12 @@ export class AuthController {
 
     return {
       message: 'Đăng nhập thành công',
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        firstName: user.firstName, 
-        lastName: user.lastName, 
-        role: user.role 
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
       },
     };
   }
@@ -94,26 +113,24 @@ export class AuthController {
   @Public()
   @Get('google')
   @UseGuards(GoogleOAuthGuard)
-  googleLogin() {
-    // Passport tự redirect sang Google — không cần body
-  }
+  @SkipThrottle()
+  googleLogin() {}
 
   @Public()
   @Get('google/callback')
   @UseGuards(GoogleOAuthGuard)
-  async googleCallback(
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
     try {
-      
       const user = req.user as AuthUser;
       const tokens = await this.authService.generateTokens(user);
       this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
-      return res.redirect(`${this.authService.getFrontendUrl()}/auth/oauth/callback`);
-
-    } catch(error) {
-      return res.redirect(`${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`);
+      return res.redirect(
+        `${this.authService.getFrontendUrl()}/auth/oauth/callback`,
+      );
+    } catch {
+      return res.redirect(
+        `${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`,
+      );
     }
   }
 
@@ -123,17 +140,20 @@ export class AuthController {
   @Post('refresh')
   @UseGuards(JwtRefreshGuard)
   @HttpCode(HttpStatus.OK)
+  @Throttle({
+    short: { ttl: 1000, limit: 5 },
+    medium: { ttl: 60000, limit: 30 },
+  })
   async refresh(
     @Req() req: RefreshTokenRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const payload = req.refreshPayload as JwtRefreshPayload;
+    const userData = req.user as AuthUser;
     const rawToken = req.rawRefreshToken as string;
 
     const tokens = await this.authService.rotateRefreshToken(
-      payload.sub,
       rawToken,
-      payload,
+      userData,
     );
 
     this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
@@ -151,7 +171,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: AuthUser,
   ) {
-
     if (user?.id && user?.tokenFamily) {
       try {
         await this.authService.logout(user.id, user.tokenFamily);
@@ -181,8 +200,78 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getMe(@CurrentUser() user: AuthUser) {
-    return { user };
+  @SkipThrottle()
+  async getMe(@CurrentUser() user: AuthUser) {
+    const data = await this.authService.getCurrentAccount(user.id);
+    return {
+      message: 'Lấy thông tin người dùng thành công',
+      user: data,
+    };
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateMeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const updated = await this.authService.updateMe(user.id, dto);
+    const tokens = await this.authService.generateTokens(updated);
+    this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+    const data = await this.authService.getCurrentAccount(updated.id);
+
+    return {
+      message: 'Cập nhật thông tin tài khoản thành công',
+      user: data,
+    };
+  }
+
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const updated = await this.authService.changePassword(user.id, dto);
+    const tokens = await this.authService.generateTokens(updated);
+    this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return {
+      message: 'Đổi mật khẩu thành công',
+    };
+  }
+
+  @Post('email-verification/request')
+  @UseGuards(JwtAuthGuard)
+  async requestEmailVerification(@CurrentUser() user: AuthUser) {
+    return this.authService.requestEmailVerification(user.id);
+  }
+
+  @Public()
+  @Post('email-verification/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmEmailVerification(@Body() dto: ConfirmTokenDto) {
+    const user = await this.authService.confirmEmailVerification(dto.token);
+    return {
+      message: 'Xác thực email thành công',
+      user,
+    };
+  }
+
+  @Public()
+  @Post('password-reset/request')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('password-reset/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.authService.confirmPasswordReset(dto);
   }
 
   // ─── Admin Only ──────────────────────────────────────────────────────────────
@@ -191,7 +280,16 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.ADMIN)
   adminOnlyRoute(@CurrentUser() user: AuthUser) {
-    return { message: 'Chào admin!', user };
+    return {
+      message: 'Chào admin!',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
   }
 
   // ─── Cookie Helpers ──────────────────────────────────────────────────────────
@@ -215,13 +313,6 @@ export class AuthController {
 
   private clearTokenCookies(res: Response): void {
     res.clearCookie(AUTH_CONSTANTS.ACCESS_TOKEN_COOKIE, COOKIE_OPTIONS);
-    /**
-     * nếu refresh token cookie không dùng path riêng thì clear đơn giản như này là đủ
-    */
-   res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
-  //  res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, {
-  //    ...COOKIE_OPTIONS,
-  //    path: AUTH_CONSTANTS.REFRESH_TOKEN_PATH 
-  //  });
+    res.clearCookie(AUTH_CONSTANTS.REFRESH_TOKEN_COOKIE, COOKIE_OPTIONS);
   }
 }

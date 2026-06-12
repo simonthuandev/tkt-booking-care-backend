@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,6 +5,10 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ─────────────────────────────────────────────────────────────
+//  ENUMS
+// ─────────────────────────────────────────────────────────────
 
 enum UserRole {
   user
@@ -22,22 +21,99 @@ enum AuthProvider {
   google
 }
 
+enum Gender {
+  male
+  female
+  other
+}
+
+enum Relationship {
+  self
+  parent
+  child
+  spouse
+  sibling
+  other
+}
+
+enum HospitalType {
+  public
+  private
+}
+
+enum AppointmentStatus {
+  pending // Vừa đặt, chờ xác nhận
+  confirmed // Bác sĩ / admin đã xác nhận
+  processing // Bệnh nhân đang trong phòng khám
+  completed // Khám xong — có thể viết review
+  cancelled // Đã hủy
+  no_show // Bệnh nhân không đến
+}
+
+enum CancelledBy {
+  patient
+  doctor
+  admin
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum PaymentProvider {
+  vn_pay
+  cash
+}
+
+enum AccountTokenType {
+  email_verification
+  password_reset
+}
+
+// ─────────────────────────────────────────────────────────────
+//  USER & AUTH
+// ─────────────────────────────────────────────────────────────
+
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
+  id              String       @id @default(uuid())
+  email           String       @unique
   password        String?
   firstName       String
   lastName        String
   avatar          String?
-  role            UserRole      @default(user)
-  provider        AuthProvider  @default(local)
-  googleId        String?       @unique
-  isActive        Boolean       @default(true)
-  isEmailVerified Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  role            UserRole     @default(user)
+  provider        AuthProvider @default(local)
+  googleId        String?      @unique
+  isActive        Boolean      @default(true)
+  isEmailVerified Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
+  // Relations
   refreshTokens   RefreshToken[]
+  accountTokens   AccountToken[]
+  patientProfiles PatientProfile[]
+  doctorProfile   Doctor?
+
+  @@index([role])
+}
+
+model AccountToken {
+  id        String           @id @default(uuid())
+  userId    String
+  tokenHash String
+  type      AccountTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@index([type, expiresAt])
 }
 
 model RefreshToken {
@@ -50,8 +126,269 @@ model RefreshToken {
   revokedAt   DateTime?
   createdAt   DateTime  @default(now())
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, tokenFamily])
   @@index([userId, isRevoked])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PATIENT PROFILE
+//  1 User có thể có nhiều hồ sơ (bản thân, con, bố mẹ...)
+// ─────────────────────────────────────────────────────────────
+
+model PatientProfile {
+  id           String       @id @default(uuid())
+  userId       String
+  fullName     String
+  dob          DateTime?
+  gender       Gender?
+  phoneNumber  String?
+  address      String?
+  relationship Relationship @default(self)
+  isDefault    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  reviews      Review[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SPECIALTY
+// ─────────────────────────────────────────────────────────────
+
+model Specialty {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  imgURL      String?
+  diseases    String[]
+  information String[]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  doctors DoctorSpecialty[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  HOSPITAL
+// ─────────────────────────────────────────────────────────────
+
+model Hospital {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  slug        String       @unique
+  address     String
+  city        String
+  type        HospitalType @default(public)
+  imgURL      String?
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  doctors      DoctorHospital[]
+  timeSlots    TimeSlot[]
+  appointments Appointment[]
+  reviews      Review[]
+
+  @@index([slug])
+  @@index([city])
+  @@index([isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DOCTOR
+// ─────────────────────────────────────────────────────────────
+
+model Doctor {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  slug            String   @unique // VD: nguyen-thi-lan-d4f2
+  imgURL          String?
+  information     String[]
+  treatment       String[]
+  experience      Int      @default(0) // số năm kinh nghiệm
+  licenseNumber   String?  @unique
+  consultationFee Float    @default(0)
+  rating          Float    @default(0) // cached
+  totalReviews    Int      @default(0) // cached
+  isVerified      Boolean  @default(false) // admin duyệt
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialties  DoctorSpecialty[]
+  hospitals    DoctorHospital[]
+  timeSlots    TimeSlot[]
+  appointments Appointment[]
+  reviews      Review[]
+
+  @@index([slug])
+  @@index([isVerified, isActive])
+  @@index([rating])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DOCTOR ↔ SPECIALTY  (N-N)
+// ─────────────────────────────────────────────────────────────
+
+model DoctorSpecialty {
+  doctorId    String
+  specialtyId String
+  isPrimary   Boolean @default(false) // chuyên khoa chính
+
+  doctor    Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@id([doctorId, specialtyId])
+  @@index([specialtyId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DOCTOR ↔ HOSPITAL  (N-N + thông tin làm việc)
+// ─────────────────────────────────────────────────────────────
+
+model DoctorHospital {
+  id          String  @id @default(uuid())
+  doctorId    String
+  hospitalId  String
+  // VD: "MON,WED,FRI" — lưu dạng string để flexible
+  workingDays String?
+  startTime   String? // "08:00"
+  endTime     String? // "17:00"
+  isActive    Boolean @default(true)
+
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, hospitalId])
+  @@index([hospitalId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  TIME SLOT
+//  Slot cụ thể mỗi ngày — admin generate hàng loạt
+// ─────────────────────────────────────────────────────────────
+
+model TimeSlot {
+  id         String   @id @default(uuid())
+  doctorId   String
+  hospitalId String
+  date       DateTime @db.Date // chỉ lưu ngày, không giờ
+  startTime  String // "08:00"
+  endTime    String // "08:30"
+  isBooked   Boolean  @default(false)
+  isBlocked  Boolean  @default(false) // admin/bác sĩ chủ động khóa
+
+  doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  appointment Appointment?
+
+  @@unique([doctorId, date, startTime]) // tránh tạo slot trùng
+  @@index([doctorId, date])
+  @@index([hospitalId, date])
+  @@index([isBooked, isBlocked])
+  @@index([doctorId, isBooked, isBlocked]) // query slot available
+}
+
+// ─────────────────────────────────────────────────────────────
+//  APPOINTMENT  ← CORE
+// ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id               String            @id @default(uuid())
+  patientProfileId String
+  doctorId         String
+  hospitalId       String
+  timeSlotId       String            @unique // 1 slot chỉ có 1 appointment
+  status           AppointmentStatus @default(pending)
+  paymentStatus    PaymentStatus     @default(pending)
+  totalAmount      Float             @default(0)
+  reason           String? // lý do khám
+  cancelReason     String?
+  cancelledBy      CancelledBy?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  // Relations
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id])
+  doctor         Doctor         @relation(fields: [doctorId], references: [id])
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id])
+  timeSlot       TimeSlot       @relation(fields: [timeSlotId], references: [id])
+
+  review   Review?
+  payments Payment[]
+
+  @@index([patientProfileId, status])
+  @@index([doctorId, status])
+  @@index([hospitalId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([doctorId, createdAt]) // bác sĩ xem lịch theo ngày
+}
+
+// ─────────────────────────────────────────────────────────────
+//  REVIEW
+//  Chỉ tạo được khi appointment = completed
+//  Trigger cập nhật cached rating của Doctor + Hospital
+// ─────────────────────────────────────────────────────────────
+
+model Review {
+  id               String   @id @default(uuid())
+  appointmentId    String   @unique // 1 appointment chỉ review 1 lần
+  patientProfileId String
+  doctorId         String
+  hospitalId       String
+  rating           Int // 1-5
+  comment          String?
+  isVisible        Boolean  @default(true) // admin có thể ẩn
+  createdAt        DateTime @default(now())
+
+  // Relations
+  appointment    Appointment    @relation(fields: [appointmentId], references: [id])
+  patientProfile PatientProfile @relation(fields: [patientProfileId], references: [id])
+  doctor         Doctor         @relation(fields: [doctorId], references: [id])
+  hospital       Hospital       @relation(fields: [hospitalId], references: [id])
+
+  @@index([doctorId, isVisible])
+  @@index([hospitalId, isVisible])
+  @@index([patientProfileId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PAYMENT
+// ─────────────────────────────────────────────────────────────
+
+model Payment {
+  id            String          @id @default(uuid())
+  appointmentId String
+  amount        Float           @default(0)
+  provider      PaymentProvider
+  transactionId String? // Mã tham chiếu từ VNPAY / MoMo
+  status        PaymentStatus   @default(pending)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+
+  @@index([appointmentId])
+  @@index([transactionId])
 }

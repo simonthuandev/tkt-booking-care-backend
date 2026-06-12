@@ -1,5 +1,5 @@
 export interface JwtPayload {
-  sub: string;       // user id
+  sub: string; // sub la chuan cua JWT, thuong la Primary key
   email: string;
   role: UserRole;
   firstName: string;
@@ -7,10 +7,6 @@ export interface JwtPayload {
   tokenFamily: string;
   iat?: number;
   exp?: number;
-}
-
-export interface JwtRefreshPayload extends JwtPayload {
-  tokenFamily: string; // để detect refresh token reuse attack
 }
 
 export interface GoogleProfile {

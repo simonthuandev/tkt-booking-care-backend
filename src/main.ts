@@ -1,16 +1,29 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, ValidationPipe, VersioningType } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  ValidationPipe,
+  VersioningType,
+} from '@nestjs/common';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import express from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { PrismaClientExceptionFilter } from '@common/filters/prisma-client-exception.filter';
 import { HttpExceptionFilter } from '@common/filters/http-exception.filter';
+import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // ─── Security Headers ──────────────────────────────────────────────────────
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // ─── Cookie Parser (bắt buộc để đọc httpOnly cookies) ─────────────────────
   app.use(cookieParser());
@@ -23,26 +36,26 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-
   // Bật khiên bảo vệ toàn cục
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true, // TỰ ĐỘNG LỌC BỎ các field không được khai báo trong DTO (VD: role)
-    forbidNonWhitelisted: true, // Nếu client cố tình gửi field lạ, quăng lỗi 400 luôn
-    transform: true, // Tự động ép kiểu dữ liệu
-    transformOptions: {
-      enableImplicitConversion: true, // Cho phép tự động chuyển đổi kiểu dữ liệu (VD: "123" -> 123)
-    },
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // TỰ ĐỘNG LỌC BỎ các field không được khai báo trong DTO (VD: role)
+      forbidNonWhitelisted: true, // Nếu client cố tình gửi field lạ, quăng lỗi 400 luôn
+      transform: true, // Tự động ép kiểu dữ liệu
+      transformOptions: {
+        enableImplicitConversion: true, // Cho phép tự động chuyển đổi kiểu dữ liệu (VD: "123" -> 123)
+      },
+    }),
+  );
 
   // ─── Class Serializer (loại bỏ @Exclude fields khỏi response) ────────────
-  app.useGlobalInterceptors(
-    new ClassSerializerInterceptor(app.get(Reflector)),
-  );
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Đăng ký lưới lọc bắt lỗi Prisma toàn cục
   app.useGlobalFilters(
-    new PrismaClientExceptionFilter(),
-    new HttpExceptionFilter(), // Bắt lỗi HTTP chung từ NestJS và Class Validator
+    new AllExceptionsFilter(), // Bắt tất cả lỗi còn sót lại
+    new PrismaClientExceptionFilter(), // Bắt lỗi từ Prisma Client
+    new HttpExceptionFilter(), // Bắt lỗi HTTP (vd: throw new BadRequestException())
   );
 
   // Tạo prefix chung (Ví dụ: 'api')
@@ -55,8 +68,11 @@ async function bootstrap() {
   });
 
   // Áp dụng middleware logging lên toàn project cho tất cả các route
-  // app.use(new LoggerMiddleware().use); 
+  // app.use(new LoggerMiddleware().use);
 
   await app.listen(process.env.PORT ?? 8000);
 }
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
+});
