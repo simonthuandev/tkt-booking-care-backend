@@ -10,16 +10,39 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import {
   User,
+  AccountTokenType,
   AuthProvider as PrismaAuthProvider,
   Prisma,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
 
 import { JwtPayload, GoogleProfile, AuthTokens, AuthUser } from './interfaces';
 import { AUTH_CONSTANTS } from './auth.constants';
-import { RegisterDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ConfirmPasswordResetDto,
+  RegisterDto,
+  UpdateMeDto,
+} from './dto/auth.dto';
 import { PrismaService } from '@/prisma/prisma.service';
+
+type AccountUser = Pick<
+  User,
+  | 'id'
+  | 'email'
+  | 'firstName'
+  | 'lastName'
+  | 'avatar'
+  | 'role'
+  | 'provider'
+  | 'isActive'
+  | 'isEmailVerified'
+>;
+
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class AuthService implements OnApplicationBootstrap {
@@ -50,11 +73,19 @@ export class AuthService implements OnApplicationBootstrap {
 
   // @Cron('0 3 * * *') // cai them nestjs/schedule, dung de xoa token luc 3.00am moi ngay
   async cleanExpiredTokens(): Promise<void> {
-    const result = await this.prisma.refreshToken.deleteMany({
-      where: { expiresAt: { lt: new Date() } },
-    });
-    if (result.count > 0) {
-      this.logger.log(`Đã xóa ${result.count} refresh token hết hạn`);
+    const [refreshResult, accountResult] = await Promise.all([
+      this.prisma.refreshToken.deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      }),
+      this.prisma.accountToken.deleteMany({
+        where: { expiresAt: { lt: new Date() } },
+      }),
+    ]);
+    if (refreshResult.count > 0) {
+      this.logger.log(`Đã xóa ${refreshResult.count} refresh token hết hạn`);
+    }
+    if (accountResult.count > 0) {
+      this.logger.log(`Đã xóa ${accountResult.count} account token hết hạn`);
     }
   }
 
@@ -91,6 +122,163 @@ export class AuthService implements OnApplicationBootstrap {
     });
 
     return this.toAuthUser(saved);
+  }
+
+  async getCurrentAccount(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: this.accountSelect(),
+    });
+
+    return this.toAccountUser(user);
+  }
+
+  async updateMe(userId: string, dto: UpdateMeDto): Promise<AuthUser> {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.firstName !== undefined && { firstName: dto.firstName }),
+        ...(dto.lastName !== undefined && { lastName: dto.lastName }),
+        ...(dto.avatar !== undefined && { avatar: dto.avatar }),
+      },
+    });
+
+    return this.toAuthUser(user);
+  }
+
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<AuthUser> {
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
+    }
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (user.provider !== PrismaAuthProvider.local || !user.password) {
+      throw new BadRequestException(
+        'Tài khoản Google không thể đổi mật khẩu tại đây',
+      );
+    }
+
+    const isMatch = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Mật khẩu hiện tại không chính xác');
+    }
+
+    const password = await bcrypt.hash(
+      dto.newPassword,
+      AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS,
+    );
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { password },
+    });
+
+    await this.revokeAllUserTokens(userId);
+    return this.toAuthUser(updated);
+  }
+
+  async requestEmailVerification(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (user.isEmailVerified) {
+      return { message: 'Email đã được xác thực' };
+    }
+
+    return this.createAccountTokenResponse(
+      user.id,
+      AccountTokenType.email_verification,
+      EMAIL_VERIFICATION_TTL_MS,
+      `/auth/verify-email`,
+      'Đã tạo link xác thực email',
+    );
+  }
+
+  async confirmEmailVerification(token: string) {
+    const accountToken = await this.findValidAccountToken(
+      token,
+      AccountTokenType.email_verification,
+    );
+
+    const [user] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: accountToken.userId },
+        data: { isEmailVerified: true },
+      }),
+      this.prisma.accountToken.update({
+        where: { id: accountToken.id },
+        data: { usedAt: new Date() },
+      }),
+    ]);
+
+    return this.toAccountUser(user);
+  }
+
+  async requestPasswordReset(email: string) {
+    const genericResponse = {
+      message:
+        'Nếu email tồn tại trong hệ thống, link khôi phục mật khẩu đã được tạo.',
+    };
+
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (
+      !user ||
+      !user.isActive ||
+      user.provider !== PrismaAuthProvider.local ||
+      !user.password
+    ) {
+      return genericResponse;
+    }
+
+    const response = await this.createAccountTokenResponse(
+      user.id,
+      AccountTokenType.password_reset,
+      PASSWORD_RESET_TTL_MS,
+      `/auth/reset-password`,
+      genericResponse.message,
+    );
+
+    return response;
+  }
+
+  async confirmPasswordReset(dto: ConfirmPasswordResetDto) {
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Mật khẩu xác nhận không khớp');
+    }
+
+    const accountToken = await this.findValidAccountToken(
+      dto.token,
+      AccountTokenType.password_reset,
+    );
+
+    const password = await bcrypt.hash(
+      dto.newPassword,
+      AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS,
+    );
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: accountToken.userId },
+        data: { password },
+      }),
+      this.prisma.accountToken.update({
+        where: { id: accountToken.id },
+        data: { usedAt: new Date() },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: accountToken.userId, isRevoked: false },
+        data: { isRevoked: true, revokedAt: new Date() },
+      }),
+    ]);
+
+    return { message: 'Đặt lại mật khẩu thành công' };
   }
 
   async validateLocalUser(
@@ -364,6 +552,93 @@ export class AuthService implements OnApplicationBootstrap {
     await this.prisma.refreshToken.create({
       data: { userId, tokenHash, tokenFamily, expiresAt },
     });
+  }
+
+  private async createAccountTokenResponse(
+    userId: string,
+    type: AccountTokenType,
+    ttlMs: number,
+    routePrefix: string,
+    message: string,
+  ) {
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(
+      rawToken,
+      AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS,
+    );
+    const now = new Date();
+
+    await this.prisma.$transaction([
+      this.prisma.accountToken.updateMany({
+        where: { userId, type, usedAt: null },
+        data: { usedAt: now },
+      }),
+      this.prisma.accountToken.create({
+        data: {
+          userId,
+          type,
+          tokenHash,
+          expiresAt: new Date(Date.now() + ttlMs),
+        },
+      }),
+    ]);
+
+    if (this.configService.get<string>('NODE_ENV') === 'production') {
+      return { message };
+    }
+
+    return {
+      message,
+      devToken: rawToken,
+      devLink: `${this.getFrontendUrl()}${routePrefix}/${rawToken}`,
+    };
+  }
+
+  private async findValidAccountToken(token: string, type: AccountTokenType) {
+    const candidates = await this.prisma.accountToken.findMany({
+      where: {
+        type,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    for (const candidate of candidates) {
+      const isMatch = await bcrypt.compare(token, candidate.tokenHash);
+      if (isMatch) return candidate;
+    }
+
+    throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+  }
+
+  private accountSelect() {
+    return {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      avatar: true,
+      role: true,
+      provider: true,
+      isActive: true,
+      isEmailVerified: true,
+    };
+  }
+
+  private toAccountUser(user: AccountUser) {
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatar: user.avatar,
+      role: user.role,
+      provider: user.provider,
+      isActive: user.isActive,
+      isEmailVerified: user.isEmailVerified,
+    };
   }
 
   // Import type trực tiếp từ @prisma/client, không phụ thuộc entity file cũ

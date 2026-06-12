@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   Res,
@@ -13,7 +14,15 @@ import {
 // import type — chỉ dùng để annotate, không cần ở runtime
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ConfirmPasswordResetDto,
+  ConfirmTokenDto,
+  LoginDto,
+  RegisterDto,
+  RequestPasswordResetDto,
+  UpdateMeDto,
+} from './dto/auth.dto';
 import {
   JwtAuthGuard,
   JwtRefreshGuard,
@@ -30,7 +39,6 @@ import {
 } from './auth.constants';
 import type { RefreshTokenRequest } from './strategies/jwt-refresh.strategy';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
-import { identity } from 'rxjs';
 
 @Controller('auth')
 export class AuthController {
@@ -119,7 +127,7 @@ export class AuthController {
       return res.redirect(
         `${this.authService.getFrontendUrl()}/auth/oauth/callback`,
       );
-    } catch (error) {
+    } catch {
       return res.redirect(
         `${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`,
       );
@@ -193,17 +201,77 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @SkipThrottle()
-  getMe(@CurrentUser() user: AuthUser) {
+  async getMe(@CurrentUser() user: AuthUser) {
+    const data = await this.authService.getCurrentAccount(user.id);
     return {
       message: 'Lấy thông tin người dùng thành công',
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
+      user: data,
     };
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: UpdateMeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const updated = await this.authService.updateMe(user.id, dto);
+    const tokens = await this.authService.generateTokens(updated);
+    this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+    const data = await this.authService.getCurrentAccount(updated.id);
+
+    return {
+      message: 'Cập nhật thông tin tài khoản thành công',
+      user: data,
+    };
+  }
+
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: ChangePasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const updated = await this.authService.changePassword(user.id, dto);
+    const tokens = await this.authService.generateTokens(updated);
+    this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return {
+      message: 'Đổi mật khẩu thành công',
+    };
+  }
+
+  @Post('email-verification/request')
+  @UseGuards(JwtAuthGuard)
+  async requestEmailVerification(@CurrentUser() user: AuthUser) {
+    return this.authService.requestEmailVerification(user.id);
+  }
+
+  @Public()
+  @Post('email-verification/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmEmailVerification(@Body() dto: ConfirmTokenDto) {
+    const user = await this.authService.confirmEmailVerification(dto.token);
+    return {
+      message: 'Xác thực email thành công',
+      user,
+    };
+  }
+
+  @Public()
+  @Post('password-reset/request')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @Post('password-reset/confirm')
+  @HttpCode(HttpStatus.OK)
+  async confirmPasswordReset(@Body() dto: ConfirmPasswordResetDto) {
+    return this.authService.confirmPasswordReset(dto);
   }
 
   // ─── Admin Only ──────────────────────────────────────────────────────────────
