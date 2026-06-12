@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
-import { Roles } from '@modules/auth/decorators';
+import { Public, Roles } from '@modules/auth/decorators';
 import { UserRole } from '@modules/auth/interfaces';
 import { AdminService } from './admin.service';
 import {
@@ -8,6 +8,21 @@ import {
   UpdateUserBanDto,
   UpdateUserRoleDto,
 } from './dto/admin.dto';
+
+@Public()
+@Controller('public')
+export class AdminPublicController {
+  constructor(private readonly adminService: AdminService) {}
+
+  @Get('stats')
+  async getPublicStats() {
+    const data = await this.adminService.getPublicStats();
+    return {
+      message: 'Lấy thống kê công khai thành công',
+      data,
+    };
+  }
+}
 
 @Roles(UserRole.ADMIN)
 @Controller('admin')
@@ -59,13 +74,13 @@ export class AdminUsersController {
   @Patch(':id/ban')
   async updateBanStatus(
     @Param('id') id: string,
-    @Body() dto: UpdateUserBanDto,
+                        @Body() dto: UpdateUserBanDto,
   ) {
     const data = await this.adminService.updateUserBanStatus(id, dto);
     return {
       message: dto.isActive
-        ? 'Đã mở khóa tài khoản thành công'
-        : 'Đã khóa tài khoản thành công',
+      ? 'Đã mở khóa tài khoản thành công'
+      : 'Đã khóa tài khoản thành công',
       data,
     };
   }
