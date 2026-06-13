@@ -97,6 +97,32 @@ export class ReviewUserMeController {
 }
 
 // ─────────────────────────────────────────────────────────────
+//  DOCTOR-ME Controller  →  /api/v1/doctors/me/reviews
+// ─────────────────────────────────────────────────────────────
+
+@Roles(UserRole.DOCTOR)
+@Controller('doctors/me/reviews')
+export class ReviewDoctorMeController {
+  constructor(private readonly reviewService: ReviewService) {}
+
+  /**
+   * GET /api/v1/doctors/me/reviews?page=&limit=
+   * Doctor xem tất cả review thuộc hồ sơ bác sĩ của mình.
+   */
+  @Get()
+  async findMyReviews(
+    @CurrentUser() user: AuthUser,
+    @Query() query: QueryReviewDto,
+  ) {
+    const result = await this.reviewService.findByDoctorUser(user.id, query);
+    return {
+      message: 'Lấy danh sách đánh giá của bác sĩ thành công',
+      ...result,
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 //  ADMIN Controller  →  /api/v1/admin/reviews
 // ─────────────────────────────────────────────────────────────
 

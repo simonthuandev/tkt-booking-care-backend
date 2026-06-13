@@ -9,6 +9,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { ToBoolean } from '@/common/decorators/to-boolean.decorator';
 
 // ─── Create (User tạo review sau khi appointment = completed) ──
 
@@ -98,11 +99,7 @@ export class QueryAdminReviewDto {
    */
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   isVisible?: boolean;
 
   @IsOptional()

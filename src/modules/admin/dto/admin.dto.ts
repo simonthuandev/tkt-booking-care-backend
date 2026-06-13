@@ -12,6 +12,7 @@ import {
   Min,
 } from 'class-validator';
 import { AuthProvider, UserRole } from '@prisma/client';
+import { ToBoolean } from '@/common/decorators/to-boolean.decorator';
 
 export class QueryAdminReportsDto {
   @IsString()
@@ -46,20 +47,12 @@ export class QueryAdminUsersDto {
 
   @IsOptional()
   @IsBoolean({ message: 'isActive phải là boolean' })
-  @Transform(({ value }: { value: unknown }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   isActive?: boolean;
 
   @IsOptional()
   @IsBoolean({ message: 'isEmailVerified phải là boolean' })
-  @Transform(({ value }: { value: unknown }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   isEmailVerified?: boolean;
 
   @IsOptional()

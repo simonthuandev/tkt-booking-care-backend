@@ -292,6 +292,49 @@ export class ReviewService {
     };
   }
 
+  /**
+   * GET /doctors/me/reviews
+   * Doctor xem review bệnh nhân đã đánh giá mình.
+   */
+  async findByDoctorUser(
+    userId: string,
+    query: { page?: number; limit?: number },
+  ) {
+    const doctor = await this.prisma.doctor.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+
+    if (!doctor) {
+      throw new NotFoundException('Không tìm thấy hồ sơ bác sĩ');
+    }
+
+    const { page = 1, limit = 10 } = query;
+    const { take, skip } = this.getPagination(page, limit);
+    const where = { doctorId: doctor.id };
+
+    const [data, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where,
+        select: REVIEW_SELECT,
+        orderBy: { createdAt: 'desc' },
+        take,
+        skip,
+      }),
+      this.prisma.review.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit: take,
+        totalPages: Math.ceil(total / take),
+      },
+    };
+  }
+
   // ─── Admin APIs ────────────────────────────────────────────
 
   /**

@@ -12,6 +12,7 @@ import {
   Matches,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
+import { ToBoolean } from '@/common/decorators/to-boolean.decorator';
 
 // ─── Enum ngày trong tuần ─────────────────────────────────────
 
@@ -180,20 +181,12 @@ export class AdminQueryTimeSlotsDto {
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   isBooked?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @ToBoolean()
   isBlocked?: boolean;
 
   @IsOptional()

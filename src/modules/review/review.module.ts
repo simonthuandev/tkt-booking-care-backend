@@ -4,6 +4,7 @@ import {
   ReviewPublicController,
   ReviewUserController,
   ReviewUserMeController,
+  ReviewDoctorMeController,
   ReviewAdminController,
 } from './review.controller';
 
@@ -12,6 +13,7 @@ import {
     ReviewPublicController, // GET /reviews
     ReviewUserController, // POST /reviews
     ReviewUserMeController, // GET /users/me/reviews
+    ReviewDoctorMeController, // GET /doctors/me/reviews
     ReviewAdminController, // GET|PATCH /admin/reviews
   ],
   providers: [ReviewService],
