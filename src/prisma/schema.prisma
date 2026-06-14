@@ -299,7 +299,7 @@ model TimeSlot {
   doctor   Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
-  appointment Appointment?
+  appointments Appointment[]
 
   @@unique([doctorId, date, startTime]) // tránh tạo slot trùng
   @@index([doctorId, date])
@@ -317,7 +317,7 @@ model Appointment {
   patientProfileId String
   doctorId         String
   hospitalId       String
-  timeSlotId       String            @unique // 1 slot chỉ có 1 appointment
+  timeSlotId       String
   status           AppointmentStatus @default(pending)
   paymentStatus    PaymentStatus     @default(pending)
   totalAmount      Float             @default(0)
@@ -342,6 +342,7 @@ model Appointment {
   @@index([status])
   @@index([createdAt])
   @@index([doctorId, createdAt]) // bác sĩ xem lịch theo ngày
+  @@index([timeSlotId, status])
 }
 
 // ─────────────────────────────────────────────────────────────

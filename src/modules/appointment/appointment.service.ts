@@ -6,7 +6,12 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { AppointmentStatus, CancelledBy } from '@prisma/client';
+import {
+  AppointmentStatus,
+  CancelledBy,
+  PaymentProvider,
+  PaymentStatus,
+} from '@prisma/client';
 import {
   CreateAppointmentDto,
   CancelAppointmentDto,
@@ -169,6 +174,126 @@ export class AppointmentService {
     });
   }
 
+  private async applyPaymentPolicy(
+    tx: any,
+    appointmentId: string,
+    status: AppointmentStatus,
+    currentPaymentStatus: PaymentStatus,
+    totalAmount: number,
+  ): Promise<PaymentStatus | null> {
+    if (status === AppointmentStatus.completed) {
+      const completedCash = await tx.payment.updateMany({
+        where: {
+          appointmentId,
+          provider: PaymentProvider.cash,
+          status: PaymentStatus.pending,
+        },
+        data: { status: PaymentStatus.completed },
+      });
+
+      if (completedCash.count > 0) {
+        return PaymentStatus.completed;
+      }
+
+      const completedPayment = await tx.payment.findFirst({
+        where: { appointmentId, status: PaymentStatus.completed },
+        select: { id: true },
+      });
+
+      if (!completedPayment && currentPaymentStatus === PaymentStatus.pending) {
+        await tx.payment.create({
+          data: {
+            appointmentId,
+            amount: totalAmount,
+            provider: PaymentProvider.cash,
+            transactionId: `CASH${Date.now()}`,
+            status: PaymentStatus.completed,
+          },
+        });
+        return PaymentStatus.completed;
+      }
+
+      return null;
+    }
+
+    if (status === AppointmentStatus.cancelled) {
+      const refundedOnline = await tx.payment.updateMany({
+        where: {
+          appointmentId,
+          provider: PaymentProvider.vn_pay,
+          status: PaymentStatus.completed,
+        },
+        data: { status: PaymentStatus.refunded },
+      });
+
+      await tx.payment.updateMany({
+        where: { appointmentId, status: PaymentStatus.pending },
+        data: { status: PaymentStatus.failed },
+      });
+
+      return refundedOnline.count > 0
+        ? PaymentStatus.refunded
+        : PaymentStatus.failed;
+    }
+
+    if (status === AppointmentStatus.no_show) {
+      const failedCash = await tx.payment.updateMany({
+        where: {
+          appointmentId,
+          provider: PaymentProvider.cash,
+          status: PaymentStatus.pending,
+        },
+        data: { status: PaymentStatus.failed },
+      });
+
+      if (
+        failedCash.count > 0 ||
+        currentPaymentStatus === PaymentStatus.pending
+      ) {
+        return PaymentStatus.failed;
+      }
+    }
+
+    return null;
+  }
+
+  private async updateAppointmentWithPaymentPolicy(
+    tx: any,
+    appt: {
+      id: string;
+      paymentStatus: PaymentStatus;
+      totalAmount: number;
+    },
+    data: Parameters<typeof this.prisma.appointment.update>[0]['data'],
+  ) {
+    const updated = await tx.appointment.update({
+      where: { id: appt.id },
+      data,
+      select: APPOINTMENT_DETAIL_SELECT,
+    });
+
+    const nextPaymentStatus = await this.applyPaymentPolicy(
+      tx,
+      appt.id,
+      updated.status,
+      appt.paymentStatus,
+      appt.totalAmount,
+    );
+
+    if (
+      nextPaymentStatus &&
+      updated.paymentStatus !== nextPaymentStatus
+    ) {
+      return tx.appointment.update({
+        where: { id: appt.id },
+        data: { paymentStatus: nextPaymentStatus },
+        select: APPOINTMENT_DETAIL_SELECT,
+      });
+    }
+
+    return updated;
+  }
+
   // ─── User APIs ─────────────────────────────────────────────
 
   /**
@@ -230,6 +355,26 @@ export class AppointmentService {
       }
 
       if (slot.isBooked) {
+        throw new ConflictException(
+          'Khung giờ này đã được đặt, vui lòng chọn khung giờ khác',
+        );
+      }
+
+      const activeSlotAppointment = await tx.appointment.findFirst({
+        where: {
+          timeSlotId: dto.timeSlotId,
+          status: {
+            in: [
+              AppointmentStatus.pending,
+              AppointmentStatus.confirmed,
+              AppointmentStatus.processing,
+            ],
+          },
+        },
+        select: { id: true },
+      });
+
+      if (activeSlotAppointment) {
         throw new ConflictException(
           'Khung giờ này đã được đặt, vui lòng chọn khung giờ khác',
         );
@@ -423,24 +568,20 @@ export class AppointmentService {
       );
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.appointment.update({
-        where: { id: appointmentId },
-        data: {
-          status: AppointmentStatus.cancelled,
-          cancelReason: dto.cancelReason,
-          cancelledBy: CancelledBy.patient,
-        },
-        select: APPOINTMENT_DETAIL_SELECT,
-      }),
-      // Trả lại slot
-      this.prisma.timeSlot.update({
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await this.updateAppointmentWithPaymentPolicy(tx, appt, {
+        status: AppointmentStatus.cancelled,
+        cancelReason: dto.cancelReason,
+        cancelledBy: CancelledBy.patient,
+      });
+
+      await tx.timeSlot.update({
         where: { id: appt.timeSlotId },
         data: { isBooked: false },
-      }),
-    ]);
+      });
 
-    return updated;
+      return updated;
+    });
   }
 
   // ─── Doctor APIs ───────────────────────────────────────────
@@ -550,25 +691,21 @@ export class AppointmentService {
       updates.cancelledBy = CancelledBy.doctor;
     }
 
-    if (shouldReleaseSlot) {
-      const [updated] = await this.prisma.$transaction([
-        this.prisma.appointment.update({
-          where: { id: appointmentId },
-          data: updates,
-          select: APPOINTMENT_DETAIL_SELECT,
-        }),
-        this.prisma.timeSlot.update({
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await this.updateAppointmentWithPaymentPolicy(
+        tx,
+        appt,
+        updates,
+      );
+
+      if (shouldReleaseSlot) {
+        await tx.timeSlot.update({
           where: { id: appt.timeSlotId },
           data: { isBooked: false },
-        }),
-      ]);
-      return updated;
-    }
+        });
+      }
 
-    return this.prisma.appointment.update({
-      where: { id: appointmentId },
-      data: updates,
-      select: APPOINTMENT_DETAIL_SELECT,
+      return updated;
     });
   }
 
@@ -595,14 +732,16 @@ export class AppointmentService {
       ...(status && { status }),
       ...(doctorId && { doctorId }),
       ...(hospitalId && { hospitalId }),
-      // Filter theo ngày tạo appointment
+      // Filter theo ngày khám trong slot, không phải ngày tạo appointment.
       ...((fromDate || toDate) && {
-        createdAt: {
+        timeSlot: {
+          date: {
           ...(fromDate && { gte: this.parseDate(fromDate) }),
           ...(toDate && {
             // Lấy hết ngày toDate (23:59:59)
             lte: new Date(this.parseDate(toDate).getTime() + 86399999),
           }),
+          },
         },
       }),
       // Tìm theo tên bệnh nhân hoặc tên bác sĩ
@@ -641,7 +780,11 @@ export class AppointmentService {
       this.prisma.appointment.findMany({
         where,
         select: APPOINTMENT_LIST_SELECT,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { timeSlot: { date: 'asc' } },
+          { timeSlot: { startTime: 'asc' } },
+          { createdAt: 'desc' },
+        ],
         take,
         skip,
       }),
@@ -704,28 +847,20 @@ export class AppointmentService {
 
     const shouldReleaseSlot = dto.status === AppointmentStatus.cancelled;
 
-    if (shouldReleaseSlot) {
-      const [updated] = await this.prisma.$transaction([
-        this.prisma.appointment.update({
-          where: { id: appointmentId },
-          data: {
-            status: dto.status,
-            cancelledBy: CancelledBy.admin,
-          },
-          select: APPOINTMENT_DETAIL_SELECT,
-        }),
-        this.prisma.timeSlot.update({
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await this.updateAppointmentWithPaymentPolicy(tx, appt, {
+        status: dto.status,
+        ...(shouldReleaseSlot && { cancelledBy: CancelledBy.admin }),
+      });
+
+      if (shouldReleaseSlot) {
+        await tx.timeSlot.update({
           where: { id: appt.timeSlotId },
           data: { isBooked: false },
-        }),
-      ]);
-      return updated;
-    }
+        });
+      }
 
-    return this.prisma.appointment.update({
-      where: { id: appointmentId },
-      data: { status: dto.status },
-      select: APPOINTMENT_DETAIL_SELECT,
+      return updated;
     });
   }
 
@@ -742,23 +877,20 @@ export class AppointmentService {
       );
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.appointment.update({
-        where: { id: appointmentId },
-        data: {
-          status: AppointmentStatus.cancelled,
-          cancelReason: dto.cancelReason,
-          cancelledBy: CancelledBy.admin,
-        },
-        select: APPOINTMENT_DETAIL_SELECT,
-      }),
-      this.prisma.timeSlot.update({
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await this.updateAppointmentWithPaymentPolicy(tx, appt, {
+        status: AppointmentStatus.cancelled,
+        cancelReason: dto.cancelReason,
+        cancelledBy: CancelledBy.admin,
+      });
+
+      await tx.timeSlot.update({
         where: { id: appt.timeSlotId },
         data: { isBooked: false },
-      }),
-    ]);
+      });
 
-    return updated;
+      return updated;
+    });
   }
 
   // ─── Internal helpers ──────────────────────────────────────

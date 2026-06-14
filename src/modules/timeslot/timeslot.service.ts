@@ -225,7 +225,7 @@ export class TimeSlotService {
           hospital: {
             select: { id: true, name: true, city: true },
           },
-          appointment: {
+          appointments: {
             select: {
               id: true,
               status: true,
@@ -568,7 +568,7 @@ export class TimeSlotService {
   async findById(id: string) {
     const slot = await this.prisma.timeSlot.findUnique({
       where: { id },
-      include: { appointment: { select: { id: true, status: true } } },
+      include: { appointments: { select: { id: true, status: true } } },
     });
     if (!slot) {
       throw new NotFoundException(`Không tìm thấy time slot với id "${id}"`);

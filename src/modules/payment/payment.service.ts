@@ -44,7 +44,7 @@ export class PaymentService {
         // Vì chọn tiền mặt tại quầy, duyệt đặt chỗ thành công luôn để giữ chỗ cho khách
         this.prisma.appointment.update({
           where: { id: appointment.id },
-          data: { status: 'confirmed' },
+          data: { status: 'confirmed', paymentStatus: 'pending' },
         }),
       ]);
 
@@ -57,15 +57,21 @@ export class PaymentService {
       const payUrl = this.buildVnpayUrl(appointment, transactionId, ipAddr);
 
       // Ghi nhận transaction ONLINE chờ webhook cổng thanh toán VNPAY bắn về sau
-      await this.prisma.payment.create({
-        data: {
-          appointmentId: appointment.id,
-          amount: appointment.totalAmount,
-          provider: 'vn_pay',
-          transactionId: transactionId,
-          status: 'pending',
-        },
-      });
+      await this.prisma.$transaction([
+        this.prisma.payment.create({
+          data: {
+            appointmentId: appointment.id,
+            amount: appointment.totalAmount,
+            provider: 'vn_pay',
+            transactionId: transactionId,
+            status: 'pending',
+          },
+        }),
+        this.prisma.appointment.update({
+          where: { id: appointment.id },
+          data: { paymentStatus: 'pending' },
+        }),
+      ]);
 
       return { payUrl };
     }
@@ -189,10 +195,16 @@ export class PaymentService {
       ]);
       return { RspCode: '00', Message: 'Confirm Success' };
     } else {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data: { status: 'failed' },
-      });
+      await this.prisma.$transaction([
+        this.prisma.payment.update({
+          where: { id: payment.id },
+          data: { status: 'failed' },
+        }),
+        this.prisma.appointment.update({
+          where: { id: payment.appointmentId },
+          data: { paymentStatus: 'failed' },
+        }),
+      ]);
       return {
         RspCode: '00',
         Message: 'Confirm Success (with transaction failed state)',
@@ -224,10 +236,16 @@ export class PaymentService {
       );
     }
 
-    await this.prisma.payment.update({
-      where: { id: paymentId },
-      data: { status: 'completed' }, // Khớp enum PaymentStatus.completed
-    });
+    await this.prisma.$transaction([
+      this.prisma.payment.update({
+        where: { id: paymentId },
+        data: { status: 'completed' }, // Khớp enum PaymentStatus.completed
+      }),
+      this.prisma.appointment.update({
+        where: { id: payment.appointmentId },
+        data: { paymentStatus: 'completed' },
+      }),
+    ]);
 
     return { message: 'Xác nhận thu tiền mặt tại quầy thành công!' };
   }
