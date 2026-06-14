@@ -386,6 +386,9 @@ export class DoctorService {
           },
           hospitals: {
             select: {
+              workingDays: true,
+              startTime: true,
+              endTime: true,
               hospital: { select: { id: true, name: true, city: true } },
               isActive: true,
             },
