@@ -18,6 +18,7 @@ import { AdminModule } from '@modules/admin/admin.module';
 import { SearchModule } from '@modules/search/search.module';
 import { PaymentModule } from '@modules/payment/payment.module';
 import { UploadModule } from '@modules/upload/upload.module';
+import { AiModule } from '@modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { UploadModule } from '@modules/upload/upload.module';
     SearchModule,
     PaymentModule,
     UploadModule,
+    AiModule,
   ],
 
   providers: [

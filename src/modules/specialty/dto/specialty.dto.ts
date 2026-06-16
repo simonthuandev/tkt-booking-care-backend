@@ -79,7 +79,7 @@ export class UpdateSpecialtyDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(1000)
   @Transform(({ value }) => value?.trim())
   description?: string;
 
