@@ -10,12 +10,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { JwtSoftStrategy } from './strategies/jwt-soft.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { MailModule } from '@modules/mail/mail.module';
 
 import { JwtAuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
+    MailModule,
     /**
      * server khong luu session, chỉ dua vao token gui tu client
      */

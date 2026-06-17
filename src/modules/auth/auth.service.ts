@@ -23,10 +23,12 @@ import { AUTH_CONSTANTS } from './auth.constants';
 import {
   ChangePasswordDto,
   ConfirmPasswordResetDto,
+  OAuthExchangeDto,
   RegisterDto,
   UpdateMeDto,
 } from './dto/auth.dto';
 import { PrismaService } from '@/prisma/prisma.service';
+import { MailService } from '@modules/mail/mail.service';
 
 type AccountUser = Pick<
   User,
@@ -43,6 +45,7 @@ type AccountUser = Pick<
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 
 @Injectable()
 export class AuthService implements OnApplicationBootstrap {
@@ -52,6 +55,7 @@ export class AuthService implements OnApplicationBootstrap {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   // ─── Lifecycle ───────────────────────────────────────────────────────────────
@@ -92,10 +96,9 @@ export class AuthService implements OnApplicationBootstrap {
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   getFrontendUrl(): string {
-    return this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3564',
-    );
+    return this.configService
+      .get<string>('FRONTEND_URL', 'http://localhost:3564')
+      .replace(/\/$/, '');
   }
 
   // ─── Local Auth ─────────────────────────────────────────────────────────────
@@ -192,13 +195,20 @@ export class AuthService implements OnApplicationBootstrap {
       return { message: 'Email đã được xác thực' };
     }
 
-    return this.createAccountTokenResponse(
+    const link = await this.createAccountTokenLink(
       user.id,
       AccountTokenType.email_verification,
       EMAIL_VERIFICATION_TTL_MS,
       `/auth/verify-email`,
-      'Đã tạo link xác thực email',
     );
+
+    await this.mailService.sendEmailVerification({
+      to: user.email,
+      name: this.getDisplayName(user),
+      link,
+    });
+
+    return { message: 'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư.' };
   }
 
   async confirmEmailVerification(token: string) {
@@ -224,7 +234,7 @@ export class AuthService implements OnApplicationBootstrap {
   async requestPasswordReset(email: string) {
     const genericResponse = {
       message:
-        'Nếu email tồn tại trong hệ thống, link khôi phục mật khẩu đã được tạo.',
+        'Nếu email tồn tại trong hệ thống, vui lòng kiểm tra hộp thư để khôi phục mật khẩu.',
     };
 
     const user = await this.prisma.user.findUnique({ where: { email } });
@@ -237,15 +247,20 @@ export class AuthService implements OnApplicationBootstrap {
       return genericResponse;
     }
 
-    const response = await this.createAccountTokenResponse(
+    const link = await this.createAccountTokenLink(
       user.id,
       AccountTokenType.password_reset,
       PASSWORD_RESET_TTL_MS,
       `/auth/reset-password`,
-      genericResponse.message,
     );
 
-    return response;
+    await this.mailService.sendPasswordReset({
+      to: user.email,
+      name: this.getDisplayName(user),
+      link,
+    });
+
+    return genericResponse;
   }
 
   async confirmPasswordReset(dto: ConfirmPasswordResetDto) {
@@ -384,6 +399,77 @@ export class AuthService implements OnApplicationBootstrap {
       }
       throw error;
     }
+  }
+
+  async createOAuthExchangeCode(userId: string): Promise<string> {
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(
+      rawToken,
+      AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS,
+    );
+
+    const token = await this.prisma.accountToken.create({
+      data: {
+        userId,
+        tokenHash,
+        type: AccountTokenType.oauth_exchange,
+        expiresAt: new Date(Date.now() + OAUTH_EXCHANGE_TTL_MS),
+      },
+      select: { id: true },
+    });
+
+    return `${token.id}.${rawToken}`;
+  }
+
+  async exchangeOAuthCode(dto: OAuthExchangeDto): Promise<{
+    user: AuthUser;
+    tokens: AuthTokens;
+  }> {
+    const [tokenId, rawToken] = dto.code.split('.');
+    if (!tokenId || !rawToken) {
+      throw new BadRequestException('OAuth code không hợp lệ');
+    }
+
+    const accountToken = await this.prisma.accountToken.findFirst({
+      where: {
+        id: tokenId,
+        type: AccountTokenType.oauth_exchange,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: true },
+    });
+
+    if (!accountToken) {
+      throw new UnauthorizedException('OAuth code không hợp lệ hoặc đã hết hạn');
+    }
+
+    const isMatch = await bcrypt.compare(rawToken, accountToken.tokenHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('OAuth code không hợp lệ hoặc đã hết hạn');
+    }
+
+    const updated = await this.prisma.accountToken.updateMany({
+      where: {
+        id: accountToken.id,
+        type: AccountTokenType.oauth_exchange,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
+    if (updated.count !== 1) {
+      throw new UnauthorizedException('OAuth code đã được sử dụng');
+    }
+
+    if (!accountToken.user.isActive) {
+      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
+    }
+
+    const user = this.toAuthUser(accountToken.user);
+    const tokens = await this.generateTokens(user);
+
+    return { user, tokens };
   }
 
   // ─── Token Management ────────────────────────────────────────────────────────
@@ -554,13 +640,12 @@ export class AuthService implements OnApplicationBootstrap {
     });
   }
 
-  private async createAccountTokenResponse(
+  private async createAccountTokenLink(
     userId: string,
     type: AccountTokenType,
     ttlMs: number,
     routePrefix: string,
-    message: string,
-  ) {
+  ): Promise<string> {
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = await bcrypt.hash(
       rawToken,
@@ -568,7 +653,7 @@ export class AuthService implements OnApplicationBootstrap {
     );
     const now = new Date();
 
-    await this.prisma.$transaction([
+    const [, accountToken] = await this.prisma.$transaction([
       this.prisma.accountToken.updateMany({
         where: { userId, type, usedAt: null },
         data: { usedAt: now },
@@ -580,21 +665,39 @@ export class AuthService implements OnApplicationBootstrap {
           tokenHash,
           expiresAt: new Date(Date.now() + ttlMs),
         },
+        select: { id: true },
       }),
     ]);
 
-    if (this.configService.get<string>('NODE_ENV') === 'production') {
-      return { message };
-    }
-
-    return {
-      message,
-      devToken: rawToken,
-      devLink: `${this.getFrontendUrl()}${routePrefix}/${rawToken}`,
-    };
+    const token = `${accountToken.id}.${rawToken}`;
+    return `${this.getFrontendUrl()}${routePrefix}/${encodeURIComponent(token)}`;
   }
 
   private async findValidAccountToken(token: string, type: AccountTokenType) {
+    const [tokenId, rawToken] = token.split('.');
+
+    if (tokenId && rawToken) {
+      const accountToken = await this.prisma.accountToken.findFirst({
+        where: {
+          id: tokenId,
+          type,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+
+      if (!accountToken) {
+        throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+      }
+
+      const isMatch = await bcrypt.compare(rawToken, accountToken.tokenHash);
+      if (!isMatch) {
+        throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+      }
+
+      return accountToken;
+    }
+
     const candidates = await this.prisma.accountToken.findMany({
       where: {
         type,
@@ -611,6 +714,11 @@ export class AuthService implements OnApplicationBootstrap {
     }
 
     throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+  }
+
+  private getDisplayName(user: Pick<User, 'firstName' | 'lastName' | 'email'>) {
+    const name = `${user.lastName} ${user.firstName}`.trim();
+    return name || user.email;
   }
 
   private accountSelect() {
