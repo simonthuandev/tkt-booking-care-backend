@@ -101,6 +101,12 @@ export class ConfirmTokenDto {
   token!: string;
 }
 
+export class OAuthExchangeDto {
+  @IsString()
+  @IsNotEmpty({ message: 'OAuth code không được để trống' })
+  code!: string;
+}
+
 export class RequestPasswordResetDto {
   @Transform(({ value }) => normalizeEmail(value))
   @IsEmail({}, { message: 'Email không hợp lệ' })

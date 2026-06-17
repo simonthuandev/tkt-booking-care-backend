@@ -19,6 +19,7 @@ import {
   ConfirmPasswordResetDto,
   ConfirmTokenDto,
   LoginDto,
+  OAuthExchangeDto,
   RegisterDto,
   RequestPasswordResetDto,
   UpdateMeDto,
@@ -122,16 +123,37 @@ export class AuthController {
   async googleCallback(@Req() req: Request, @Res() res: Response) {
     try {
       const user = req.user as AuthUser;
-      const tokens = await this.authService.generateTokens(user);
-      this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+      const code = await this.authService.createOAuthExchangeCode(user.id);
       return res.redirect(
-        `${this.authService.getFrontendUrl()}/auth/oauth/callback`,
+        `${this.authService.getFrontendUrl()}/auth/oauth/callback?code=${encodeURIComponent(code)}`,
       );
     } catch {
       return res.redirect(
         `${this.authService.getFrontendUrl()}/auth/login?error=oauth_failed`,
       );
     }
+  }
+
+  @Public()
+  @Post('oauth/exchange')
+  @HttpCode(HttpStatus.OK)
+  async exchangeOAuthCode(
+    @Body() dto: OAuthExchangeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { user, tokens } = await this.authService.exchangeOAuthCode(dto);
+    this.setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
+
+    return {
+      message: 'Đăng nhập Google thành công',
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    };
   }
 
   // ─── Token Refresh ───────────────────────────────────────────────────────────

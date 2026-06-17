@@ -71,6 +71,7 @@ enum PaymentProvider {
 enum AccountTokenType {
   email_verification
   password_reset
+  oauth_exchange
 }
 
 // ─────────────────────────────────────────────────────────────

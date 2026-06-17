@@ -23,6 +23,7 @@ import { AUTH_CONSTANTS } from './auth.constants';
 import {
   ChangePasswordDto,
   ConfirmPasswordResetDto,
+  OAuthExchangeDto,
   RegisterDto,
   UpdateMeDto,
 } from './dto/auth.dto';
@@ -43,6 +44,7 @@ type AccountUser = Pick<
 
 const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 
 @Injectable()
 export class AuthService implements OnApplicationBootstrap {
@@ -384,6 +386,77 @@ export class AuthService implements OnApplicationBootstrap {
       }
       throw error;
     }
+  }
+
+  async createOAuthExchangeCode(userId: string): Promise<string> {
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = await bcrypt.hash(
+      rawToken,
+      AUTH_CONSTANTS.BCRYPT_SALT_ROUNDS,
+    );
+
+    const token = await this.prisma.accountToken.create({
+      data: {
+        userId,
+        tokenHash,
+        type: AccountTokenType.oauth_exchange,
+        expiresAt: new Date(Date.now() + OAUTH_EXCHANGE_TTL_MS),
+      },
+      select: { id: true },
+    });
+
+    return `${token.id}.${rawToken}`;
+  }
+
+  async exchangeOAuthCode(dto: OAuthExchangeDto): Promise<{
+    user: AuthUser;
+    tokens: AuthTokens;
+  }> {
+    const [tokenId, rawToken] = dto.code.split('.');
+    if (!tokenId || !rawToken) {
+      throw new BadRequestException('OAuth code không hợp lệ');
+    }
+
+    const accountToken = await this.prisma.accountToken.findFirst({
+      where: {
+        id: tokenId,
+        type: AccountTokenType.oauth_exchange,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: { user: true },
+    });
+
+    if (!accountToken) {
+      throw new UnauthorizedException('OAuth code không hợp lệ hoặc đã hết hạn');
+    }
+
+    const isMatch = await bcrypt.compare(rawToken, accountToken.tokenHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('OAuth code không hợp lệ hoặc đã hết hạn');
+    }
+
+    const updated = await this.prisma.accountToken.updateMany({
+      where: {
+        id: accountToken.id,
+        type: AccountTokenType.oauth_exchange,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
+    if (updated.count !== 1) {
+      throw new UnauthorizedException('OAuth code đã được sử dụng');
+    }
+
+    if (!accountToken.user.isActive) {
+      throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
+    }
+
+    const user = this.toAuthUser(accountToken.user);
+    const tokens = await this.generateTokens(user);
+
+    return { user, tokens };
   }
 
   // ─── Token Management ────────────────────────────────────────────────────────
